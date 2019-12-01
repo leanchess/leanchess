@@ -41,20 +41,23 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
-    mov cl, 60h                                ;Ranks * width + margin width + safety
-    mov si, offset board_db + 18               ;Grab preceding CR/LF
+    mov cl, 83                                 ;Ranks * width + margin width + safety
+    mov si, offset board_db + 28               ;Grab preceding CR/LF
     mov bp, di                                 ;Clone buffer address
     push cx                                    ;Save output length
 
 disp_loop:
     lodsb                                      ;Read square contents
-    test al, 30h                               ;Piece?
-    jz disp_cont                               ;No, proceed to write square
+    test al, 08h                               ;Border?
+    jnz disp_cont                              ;Yes, proceed to write square
 
 disp_piece:
-    inc ax                                     ;Zero-align king
-    and al, 27h                                ;Isolate piece type and black/lowercase
-    add al, 4Bh                                ;King, (none), (reserved), kNight, bishOp, Pawn, Queen, Rook
+    mov dx, ax                                 ;Clone square contents
+    and al, 07h                                ;Isolate piece type
+    mov bx, offset disp_db                     ;Set base chars' address
+    xlat                                       ;Translate piece type to char
+    and dx, 0020h                              ;Isolate black/lowercase/first display row
+    or al, dl                                  ;Apply case
     
 disp_cont:
     stosb                                      ;Write square
@@ -62,8 +65,7 @@ disp_cont:
     
     pop cx                                     ;Restore output length
     mov ah, 13h                                ;Write string
-    mov bx, cx                                 ;Black on brown
-    xor dx, dx                                 ;Set position to 0,0
+    mov bx, 0007h                              ;Dark gray on black
     int 10h                                    ;BIOS output function
 
     push bp                                    ;Save buffer address
@@ -165,7 +167,7 @@ src_loop:
     mov dl, al                                 ;Save piece type
     mov ah, 3                                  ;Three bytes per piece type
     mul ah                                     ;Calculate metadata offset
-    mov si, offset moves_knight - 6            ;Set base metadata address
+    mov si, offset moves_wpawn - 3             ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
     lodsb                                      ;Read vector count
     mov cl, al                                 ;Clone vector count
@@ -187,8 +189,8 @@ dest_loop:
     test ah, bh                                ;Player's piece or border?
     jnz vec_cont                               ;Yes, proceed to next vector
     
-    cmp dl, 04h                                ;Black or white pawn?
-    jne eval                                   ;No, proceed to evaluate move
+    cmp dl, 03h                                ;Black or white pawn?
+    jge eval                                   ;No, proceed to evaluate move
 
 pawn:
     test al, 01h                               ;Any file change?
@@ -200,11 +202,6 @@ pawn_diag:
 pawn_cont:
     test ah, bl                                ;Opponent's piece (or border)?
     jz vec_cont                                ;No, proceed to next vector
-
-    and al, 80h                                ;Isolate sign bit
-    shr al, 2                                  ;Align with black bit
-    xor al, bh                                 ;Flip color and border bits
-    jnp vec_cont                               ;Odd, proceed to next vector
 
 eval:
     pusha                                      ;Save all GP registers
@@ -249,16 +246,17 @@ src_cont:
 play_end:
 
 init_db:
-    db 08h, 08h, 08h, 0A6h, 0A2h, 0A3h, 0A5h, 0A7h, 0A3h, 0A2h, 0A6h
-    db 24h, 00h, 00h, 00h, 00h, 14h
-    db 96h, 92h, 93h, 95h, 97h, 93h, 92h, 96h, 08h
+    db 08h, 08h, 08h, 0A5h, 0A3h, 0A4h, 0A6h, 0A7h, 0A4h, 0A3h, 0A5h
+    db 22h, 00h, 00h, 00h, 00h, 11h
+    db 95h, 93h, 94h, 96h, 97h, 94h, 93h, 95h, 08h, 08h
 
-moves_db: ;Fall through 1 byte
-    moves_knight db 08h, 1, vec_knight - moves_knight - 3
+moves_db:
+    moves_wpawn  db   3, 1, vec_wpawn  - moves_wpawn  - 3
+    moves_bpawn  db   3, 1, vec_bpawn  - moves_bpawn  - 3
+    moves_knight db   8, 1, vec_knight - moves_knight - 3
     moves_bishop db   4, 7, vec_bishop - moves_bishop - 3
-    moves_pawn   db   6, 1, vec_pawn   - moves_pawn   - 3
-    moves_queen  db   8, 7, vec_bishop - moves_queen  - 3
     moves_rook   db   4, 7, vec_rook   - moves_rook   - 3
+    moves_queen  db   8, 7, vec_bishop - moves_queen  - 3
     moves_king   db   8, 1, vec_bishop - moves_king   - 3
 
 vec_pawn:
@@ -269,8 +267,11 @@ vec_pawn:
     vec_rook     db  10,   1,  -1, -10
 
 eval_db:
-    db 0, 0, 3, 5, 1, 9, 5, 46
+    db 0, 1, 1, 3, 3, 5, 9
 
+disp_db: ;Fall through 1 byte
+    db 46, "PpNBRQK"
+    
 board_db:
 
 code ends
