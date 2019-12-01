@@ -1,2 +1,2 @@
 # LeanChess
-Very small x86 chess program
+The world's smallest chess program
