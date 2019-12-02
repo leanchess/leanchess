@@ -131,6 +131,7 @@ move_sub:
     mov dh, al                                 ;Clone destination square contents
     sub [bp], dl                               ;Clear source square
     mov [di], dl                               ;Write destination square
+    or byte ptr [di], 40h                      ;Mark destination as moved piece
     xchg bl, bh                                ;Swap player's and opponent's colors
     
     push bx                                    ;Save player's and opponent's colors
