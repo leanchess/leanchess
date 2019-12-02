@@ -258,7 +258,7 @@ vec_pawn:
     vec_rook     db  10,   1,  -1, -10
 
 eval_db:
-    db 0, 0, 3, 5, 1, 9, 5, 46
+    db 0, 0, 3, 3, 1, 9, 5, 46
 
 board_db:
 
