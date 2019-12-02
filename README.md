@@ -1,2 +1,16 @@
+![avatar](https://github.com/leanchess/leanchess.github.io/raw/master/images/lc.png)
+
 # LeanChess
-Very small x86 chess program
+
+The world's smallest chess program
+
+## Building from source
+
+```
+tasm lc
+tlink /t lc
+```
+
+## Thanks
+
+Isaac Garzón
