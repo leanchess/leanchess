@@ -41,10 +41,9 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
-    mov cl, 83                                 ;Ranks * width + margin width + safety
-    mov si, offset board_db + 28               ;Grab preceding CR/LF
-    mov bp, di                                 ;Clone buffer address
-    push cx                                    ;Save output length
+    mov cl, 92                                 ;(Ranks + 1) * width + margin width + CRLF
+    mov si, offset board_db + 18               ;Grab preceding CR/LF
+    mov dx, di                                 ;Clone buffer address
 
 disp_loop:
     lodsb                                      ;Read square contents
@@ -52,23 +51,23 @@ disp_loop:
     jnz disp_cont                              ;Yes, proceed to write square
 
 disp_piece:
-    mov dx, ax                                 ;Clone square contents
+    push ax                                    ;Save square contents
     and al, 07h                                ;Isolate piece type
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
-    and dx, 0020h                              ;Isolate black/lowercase/first display row
-    or al, dl                                  ;Apply case
+    pop bx                                     ;Restore square contents
+    and bl, 20h                                ;Isolate black/lowercase
+    or al, bl                                  ;Apply case
     
 disp_cont:
     stosb                                      ;Write square
     loop disp_loop                             ;Move to next square
     
-    pop cx                                     ;Restore output length
-    mov ah, 13h                                ;Write string
-    mov bx, 0007h                              ;Dark gray on black
-    int 10h                                    ;BIOS output function
+    mov ax, 0924h                              ;String terminator/write string
+    stosb                                      ;Write string terminator
+    int 21h                                    ;BIOS output function
 
-    push bp                                    ;Save buffer address
+    push dx                                    ;Save buffer address
     call read_move_sub                         ;Read move
     call play_sub                              ;Perform two moves
     pop di                                     ;Restore buffer address
@@ -87,23 +86,15 @@ read_move_sub:
 ;Output:
 ;  DI - Square address
 read_square_sub:
-    mov di, offset board_db + 109              ;Bottom right corner + margin
-    mov dl, 1                                  ;Set file factor
-    call read_coord_sub                        ;Read character and add to address
-    mov dl, -10                                ;Set rank factor
-    
-;Read coordinate from input and update square address
-;Input:
-;  DL - Multiplication factor
-;  DI - Base square address
-;Output:
-;  DI - Updated square address
-read_coord_sub:
-    xor ah, ah                                 ;Read character
-    int 16h                                    ;BIOS input function
-    and al, 0Fh                                ;Isolate number (expected 1-8)
-    imul dl                                    ;Multiply signed
+    mov di, offset board_db + 109 - 15Fh       ;Bottom right corner + margin - ASCII offset
+    mov ah, 01h                                ;Read character
+    int 21h                                    ;DOS I/O function
     add di, ax                                 ;Add result to base address
+    int 21h                                    ;DOS I/O function
+    and al, 0Fh                                ;Isolate number (expected 1-8)
+    xchg ah, al                                ;Flip BCD digits
+    aad                                        ;Multiply AH by 10 and add AL
+    sub di, ax                                 ;Subtract result from base address
 
 sub_ret:
     ret
