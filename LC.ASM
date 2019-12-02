@@ -144,7 +144,7 @@ move_sub:
 next:
     mov ah, -64                                ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 107              ;Start from bottom right corner
+    mov bp, offset board_db + 30               ;Start from top left corner
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
@@ -208,7 +208,7 @@ eval:
     cmp al, ah                                 ;Current value exceeds max value?
     pop di                                     ;Restore destination square address
     pop bp                                     ;Restore source square address
-    jle undo                                   ;No, proceed to undo move
+    jl undo                                    ;No, proceed to undo move
 
 best:
     mov [si + 39], al                          ;Write max value
@@ -228,7 +228,7 @@ vec_cont:
     loop vec_loop                              ;Move to next vector
     
 src_cont:
-    dec bp                                     ;Decrement source square address
+    inc bp                                     ;Increment source square address
     pop cx                                     ;Restore source counter
     loop src_loop                              ;Move to next source
     
