@@ -193,7 +193,7 @@ pawn:
     test al, 01h                               ;Any file change?
     jnz pawn_cont                              ;Yes, proceed to check destination square
 
-pawn_diag:
+pawn_inv:
     xor ah, 30h                                ;Invert destination's color
 
 pawn_cont:
