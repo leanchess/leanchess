@@ -161,26 +161,25 @@ src_loop:
     test al, bl                                ;Opponent's piece or border?
     jnz src_cont                               ;Yes, proceed to next source square
     
-    and al, 07h                                ;Isolate piece type
+    and ax, 07h                                ;Isolate piece type
     jz src_cont                                ;No piece, proceed to next source square
     
     mov dl, al                                 ;Save piece type
-    mov ah, 3                                  ;Three bytes per piece type
-    mul ah                                     ;Calculate metadata offset
-    mov si, offset moves_wpawn - 3             ;Set base metadata address
+    shl ax, 1                                  ;Two bytes per piece type
+    mov si, offset moves_wpawn - 2             ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
-    lodsb                                      ;Read vector count
-    mov cl, al                                 ;Clone vector count
     lodsb                                      ;Read range
-    mov dh, al                                 ;Save range
+    mov cl, al                                 ;Clone range
     lodsb                                      ;Read relative vectors address
     add si, ax                                 ;Calculate absolute vectors address
 
 vec_loop:
-    push cx                                    ;Save vector counter
     lodsb                                      ;Read vector
+    or al, al                                  ;Zero vector?
+    jz src_cont                                ;Yes, proceed to next source square
+    
+    push cx                                    ;Save range
     mov di, bp                                 ;Clone source square address
-    mov cl, dh                                 ;Restore range
 
 dest_loop:
     cbw                                        ;Extend vector's sign
@@ -232,8 +231,8 @@ undo:
     loopz dest_loop                            ;No, move to next destination
 
 vec_cont:
-    pop cx                                     ;Restore vector counter
-    loop vec_loop                              ;Move to next vector
+    pop cx                                     ;Restore range
+    jmp vec_loop                               ;Move to next vector
     
 src_cont:
     dec bp                                     ;Decrement source square address
@@ -251,22 +250,23 @@ init_db:
     db 95h, 93h, 94h, 96h, 97h, 94h, 93h, 95h, 08h, 08h
 
 moves_db:
-    moves_wpawn  db   3, 1, vec_wpawn  - moves_wpawn  - 3
-    moves_bpawn  db   3, 1, vec_bpawn  - moves_bpawn  - 3
-    moves_knight db   8, 1, vec_knight - moves_knight - 3
-    moves_bishop db   4, 7, vec_bishop - moves_bishop - 3
-    moves_rook   db   4, 7, vec_rook   - moves_rook   - 3
-    moves_queen  db   8, 7, vec_bishop - moves_queen  - 3
-    moves_king   db   8, 1, vec_bishop - moves_king   - 3
+    moves_wpawn  db 1, vec_wpawn  - moves_wpawn  - 2
+    moves_bpawn  db 1, vec_bpawn  - moves_bpawn  - 2
+    moves_knight db 1, vec_knight - moves_knight - 2
+    moves_bishop db 7, vec_bishop - moves_bishop - 2
+    moves_rook   db 7, vec_rook   - moves_rook   - 2
+    moves_queen  db 7, vec_king   - moves_queen  - 2
+    moves_king   db 1, vec_king   - moves_king   - 2
 
 vec_pawn:
-    vec_wpawn    db -11,  -9, -10
-    vec_bpawn    db   9,  11,  10
-    vec_knight   db  19,  21,   8,  12, -21, -12, -19,  -8
-    vec_bishop   db   9,  11, -11,  -9
+    vec_wpawn    db -11,  -9, -10,   0
+    vec_bpawn    db   9,  11,  10,   0
+    vec_knight   db  19,  21,   8,  12, -21, -12, -19,  -8,   0
+    vec_bishop   db   9,  11, -11,  -9,   0
+    vec_king     db   9,  11, -11,  -9
     vec_rook     db  10,   1,  -1, -10
 
-eval_db:
+eval_db: ;Fall through 1 byte
     db 0, 1, 1, 3, 3, 5, 9
 
 disp_db: ;Fall through 1 byte
