@@ -190,11 +190,11 @@ pawn:
 
 pawn_vert:
     test dh, 40h                               ;Source piece moved?
-    jnz pawn_diag                              ;Yes, proceed to invert color
+    jnz pawn_inv                               ;Yes, proceed to invert color
     or dh, 40h                                 ;Mark as moved
     inc cx                                     ;Increment range
 
-pawn_diag:
+pawn_inv:
     xor ah, 30h                                ;Invert destination's color
 
 pawn_cont:
