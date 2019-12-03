@@ -153,6 +153,7 @@ src_loop:
     test al, bl                                ;Opponent's piece or border?
     jnz src_cont                               ;Yes, proceed to next source square
     
+    mov dh, al                                 ;Save source square
     and ax, 07h                                ;Isolate piece type
     jz src_cont                                ;No piece, proceed to next source square
     
@@ -186,6 +187,12 @@ dest_loop:
 pawn:
     test al, 01h                               ;Any file change?
     jnz pawn_cont                              ;Yes, proceed to check destination square
+
+pawn_vert:
+    test dh, 40h                               ;Source piece moved?
+    jnz pawn_diag                              ;Yes, proceed to invert color
+    or dh, 40h                                 ;Mark as moved
+    inc cx                                     ;Increment range
 
 pawn_diag:
     xor ah, 30h                                ;Invert destination's color
