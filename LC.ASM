@@ -126,14 +126,41 @@ play_sub:
 ;  DI - Opponent's best destination square address
 move_sub:
     mov dl, [bp]                               ;Read source square
-    mov al, [di]                               ;Read destination square
-    mov dh, al                                 ;Clone destination square contents
+    mov dh, [di]                               ;Read destination square
     sub [bp], dl                               ;Clear source square
     mov [di], dl                               ;Write destination square
     or byte ptr [di], 40h                      ;Mark destination as moved piece
     xchg bl, bh                                ;Swap player's and opponent's colors
+
+    mov al, dl                                 ;Clone source square contents
+    and al, 07h                                ;Isolate piece type
+    cmp al, 07h                                ;King?
+    jne move_cont                              ;No, proceed to calculate gain
+
+move_king:
+    pusha                                      ;Save king's move parameters
+    mov ax, di                                 ;Clone destination square address
+    sub ax, bp                                 ;Calculate king's vector
+    cmp al, 0FEh                               ;Queenside castling?
+    je move_cast_cont                          ;Yes, proceed to calculate rook's move
+    cmp al, 02h                                ;Kingside castling?
+    jne move_king_cont                         ;No, proceed to restore king's move
+    dec di                                     ;Decrement source address
+
+move_cast_cont:
+    add di, ax                                 ;Calculate rook's source address
+    sar ax, 1                                  ;Normalize king's vector
+    add bp, ax                                 ;Calculate rook's destination address
+    mov al, [di]                               ;Read rook's source square
+    sub [di], al                               ;Clear rook's source square
+    mov [bp], al                               ;Write rook's destination square
+
+move_king_cont:
+    popa                                       ;Restore king's move parameters
     
+move_cont:
     push bx                                    ;Save player's and opponent's colors
+    mov al, dh                                 ;Clone destination square contents
     and al, 07h                                ;Isolate piece type
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get player's gain
