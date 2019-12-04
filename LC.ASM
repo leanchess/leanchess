@@ -127,15 +127,23 @@ play_sub:
 move_sub:
     mov dl, [bp]                               ;Read source square
     mov dh, [di]                               ;Read destination square
-    sub [bp], dl                               ;Clear source square
-    mov [di], dl                               ;Write destination square
-    or byte ptr [di], 40h                      ;Mark destination as moved piece
-    xchg bl, bh                                ;Swap player's and opponent's colors
-
+    and byte ptr [bp], 80h                     ;Clear source square
     mov al, dl                                 ;Clone source square contents
     and al, 07h                                ;Isolate piece type
+    cmp al, 03h                                ;Black or white pawn?
+    jge move_cont                              ;No, proceed to kingdom check
+
+move_pawn:
+    test dh, 80h                               ;Promotion destination?
+    jz move_dest                               ;No, proceed to write destination square
+
+move_promo:
+    mov al, 06h                                ;Promote to queen
+    mov ch, 8                                  ;Gain = queen - pawn
+
+move_cont:
     cmp al, 07h                                ;King?
-    jne move_cont                              ;No, proceed to calculate gain
+    jne move_dest                              ;No, proceed to write destination square
 
 move_king:
     pusha                                      ;Save king's move parameters
@@ -158,13 +166,24 @@ move_cast_cont:
 move_king_cont:
     popa                                       ;Restore king's move parameters
     
-move_cont:
+move_dest:
+    or al, bh                                  ;Set color
+    mov ah, dh                                 ;Clone destination contents
+    and ax, 8037h                              ;Isolate piece type, color and promotion flag
+    or al, 40h                                 ;Set moved flag
+    or al, ah                                  ;Update promotion flag
+    mov [di], al                               ;Write destination square
+
     push bx                                    ;Save player's and opponent's colors
     mov al, dh                                 ;Clone destination square contents
     and al, 07h                                ;Isolate piece type
     mov bx, offset eval_db                     ;Set base values' address
-    xlat                                       ;Get player's gain
+    xlat                                       ;Get capture gain
+    add al, ch                                 ;Add promotion gain
     pop bx                                     ;Restore player's and opponent's colors
+
+    xchg bl, bh                                ;Swap player's and opponent's colors
+    xor ch, ch                                 ;Clear depth's upper byte
     jcxz sub_ret                               ;If depth is zero, return
 
 next:
