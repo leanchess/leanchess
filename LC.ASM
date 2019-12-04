@@ -203,8 +203,8 @@ move_dest:
     xchg bl, bh                                ;Swap player's and opponent's colors
     xor ch, ch                                 ;Clear depth's upper byte
     jcxz sub_ret                               ;If depth is zero, return
-	cmp al, 46
-	jge sub_ret
+    cmp al, 46
+    jge sub_ret
 
 next:
     mov ah, -64                                ;Initialize opponent's max value
