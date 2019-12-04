@@ -35,31 +35,31 @@ init_loop:
     
 init_cont:
     rep stosb                                  ;Write row
-    mov ax, 0A0Dh                              ;AL=CR, AH=LF
-    stosw                                      ;Write two bytes
+    mov al, 08h                                ;Border square
+    mov cl, 8                                  ;Set square counter
+    rep stosb                                  ;Write border
     pop cx                                     ;Restore row counter
     loop init_loop                             ;Move to next row
 
 main_loop:
-    mov cl, 92                                 ;(Ranks + 1) * width + margin width + CRLF
-    mov si, offset board_db + 18               ;Grab preceding CR/LF
+    mov cl, 74                                 ;Ranks * (files + 1) + LF * 2
+    mov si, offset board_db + 20h              ;Grab preceding LF * 2
     mov dx, di                                 ;Clone buffer address
 
 disp_loop:
     lodsb                                      ;Read square contents
     test al, 08h                               ;Border?
-    jnz disp_cont                              ;Yes, proceed to write square
+    jz disp_cont                               ;No, proceed to write square
+    add si, 7                                  ;Skip border squares
 
-disp_piece:
+disp_cont:
     push ax                                    ;Save square contents
-    and al, 07h                                ;Isolate piece type
+    and al, 0Fh                                ;Isolate piece type/border
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
     pop bx                                     ;Restore square contents
     and bl, 20h                                ;Isolate black/lowercase
     or al, bl                                  ;Apply case
-    
-disp_cont:
     stosb                                      ;Write square
     loop disp_loop                             ;Move to next square
     
@@ -86,14 +86,13 @@ read_move_sub:
 ;Output:
 ;  DI - Square address
 read_square_sub:
-    mov di, offset board_db + 109 - 15Fh       ;Bottom right corner + margin - ASCII offset
+    mov di, offset board_db + 0AEh - 15Fh      ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
     add di, ax                                 ;Add result to base address
     int 21h                                    ;DOS I/O function
-    and al, 0Fh                                ;Isolate number (expected 1-8)
-    xchg ah, al                                ;Flip BCD digits
-    aad                                        ;Multiply AH by 10 and add AL
+    and ax, 0Fh                                ;Isolate number (expected 1-8)
+    shl ax, 4                                  ;Multiply by 16
     sub di, ax                                 ;Subtract result from base address
 
 sub_ret:
@@ -258,18 +257,18 @@ moves_db:
     moves_king   db 1, vec_king   - moves_king   - 2
 
 vec_pawn:
-    vec_wpawn    db -11,  -9, -10,   0
-    vec_bpawn    db   9,  11,  10,   0
-    vec_knight   db  19,  21,   8,  12, -21, -12, -19,  -8,   0
-    vec_bishop   db   9,  11, -11,  -9,   0
-    vec_king     db   9,  11, -11,  -9
-    vec_rook     db  10,   1,  -1, -10
+    vec_wpawn    db 0EFh, 0F1h, 0F0h, 0
+    vec_bpawn    db 00Fh, 011h, 010h, 0
+    vec_knight   db 01Fh, 021h, 00Eh, 012h, 0DFh, 0E1h, 0EEh, 0F2h, 0
+    vec_bishop   db 00Fh, 011h, 0EFh, 0F1h, 0
+    vec_king     db 00Fh, 011h, 0EFh, 0F1h
+    vec_rook     db 010h, 001h, 0FFh, 0F0h
 
 eval_db: ;Fall through 1 byte
     db 0, 1, 1, 3, 3, 5, 9
 
 disp_db: ;Fall through 1 byte
-    db 46, "PpNBRQK"
+    db 46, "PpNBRQK", 0Ah
     
 board_db:
 
