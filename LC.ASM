@@ -108,8 +108,12 @@ play_sub:
     mov cl, 3                                  ;Set search depth
     call move_sub                              ;Perform move and find best next move
 
+auto_move_sub:
+    mov ah, 06h                                ;Assume promotion to queen
+
 ;Perform move and find best next move
 ;Input:
+;  AH - Promoted piece type
 ;  BL - Player's color + border
 ;  BH - Opponent's color + border
 ;  CX - Search depth
@@ -138,8 +142,22 @@ move_pawn:
     jz move_dest                               ;No, proceed to write destination square
 
 move_promo:
-    mov al, 06h                                ;Promote to queen
-    mov ch, 8                                  ;Gain = queen - pawn
+    mov al, ah                                 ;Clone promoted piece type
+    or al, al                                  ;Promoted piece type set?
+    jnz move_promo_cont                        ;Yes, proceed to calculate promotion gain
+
+move_promo_read:
+    mov ah, 01h                                ;Read character
+    int 21h                                    ;DOS I/O function
+    and al, 07h                                ;Isolate piece type
+    
+move_promo_cont:
+    pusha                                      ;Save promoted piece type and colors
+    mov bx, offset eval_db                     ;Set base values' address
+    xlat                                       ;Get capture gain
+    dec ax                                     ;Subtract pawn's value
+    mov ch, al                                 ;Save promotion gain
+    popa                                       ;Restore promoted piece type and colors
 
 move_cont:
     cmp al, 07h                                ;King?
@@ -254,7 +272,7 @@ eval:
     mov si, sp                                 ;Clone stack pointer
     mov cx, [si + 36]                          ;Read current depth
     dec cx                                     ;Decrement depth
-    call move_sub                              ;Recursively call self
+    call auto_move_sub                         ;Recursively call self
     mov ah, [si + 39]                          ;Read player's max value
     cmp al, ah                                 ;Current value exceeds max value?
     pop di                                     ;Restore destination square address
