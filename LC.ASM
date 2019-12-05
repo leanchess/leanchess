@@ -94,6 +94,22 @@ read_square_sub:
     and ax, 0Fh                                ;Isolate number (expected 1-8)
     shl ax, 4                                  ;Multiply by 16
     sub di, ax                                 ;Subtract result from base address
+    ret
+
+;Calculate gain
+;Input:
+;  AL - Piece
+;  CH - Total gain
+;Output:
+;  AL - Piece type
+;  CH - Updated total gain
+gain_sub:
+    and al, 07h                                ;Isolate piece type
+    pusha                                      ;Save piece type and colors
+    mov bx, offset eval_db                     ;Set base values' address
+    xlat                                       ;Get piece's value
+    add ch, al                                 ;Add to total gain
+    popa                                       ;Restore piece type and colors
 
 sub_ret:
     ret
@@ -149,15 +165,10 @@ move_promo:
 move_promo_read:
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
-    and al, 07h                                ;Isolate piece type
     
 move_promo_cont:
-    pusha                                      ;Save promoted piece type and colors
-    mov bx, offset eval_db                     ;Set base values' address
-    xlat                                       ;Get capture gain
-    dec ax                                     ;Subtract pawn's value
-    mov ch, al                                 ;Save promotion gain
-    popa                                       ;Restore promoted piece type and colors
+    call gain_sub                              ;Calculate promotion gain
+    dec ch                                     ;Subtract pawn's value
 
 move_cont:
     cmp al, 07h                                ;King?
@@ -192,13 +203,9 @@ move_dest:
     or al, ah                                  ;Update promotion flag
     mov [di], al                               ;Write destination square
 
-    push bx                                    ;Save player's and opponent's colors
     mov al, dh                                 ;Clone destination square contents
-    and al, 07h                                ;Isolate piece type
-    mov bx, offset eval_db                     ;Set base values' address
-    xlat                                       ;Get capture gain
-    add al, ch                                 ;Add promotion gain
-    pop bx                                     ;Restore player's and opponent's colors
+    call gain_sub                              ;Calculate capture gain
+    mov al, ch                                 ;Save total gain
 
     xchg bl, bh                                ;Swap player's and opponent's colors
     xor ch, ch                                 ;Clear depth's upper byte
