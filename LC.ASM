@@ -141,7 +141,7 @@ eval_sub:
     mov si, sp                                 ;Clone stack pointer
     mov cx, [si + 38]                          ;Read current depth
     dec cx                                     ;Decrement depth
-    call auto_move_sub                         ;Perform move and find next best move
+    call move_sub                              ;Perform move and find next best move
     mov ah, [si + 41]                          ;Read player's max value
     cmp al, ah                                 ;Current value exceeds max value?
     pop di                                     ;Restore destination square address
@@ -175,7 +175,7 @@ play_sub:
     call move_sub                              ;Perform move and find best next move
 
 auto_move_sub:
-    mov ah, 06h                                ;Assume promotion to queen
+    mov ah, 06h                                ;Always promote to queen
 
 ;Perform move and find best next move
 ;Input:
@@ -322,6 +322,11 @@ pawn_inv:
 pawn_cont:
     test ah, bl                                ;Opponent's piece (or border)?
     jz vec_cont                                ;No, proceed to next vector
+
+eval_knight:
+    mov ah, 03h                                ;Promote to knight
+    call eval_sub                              ;Evaluate move
+    mov ah, 06h                                ;Promote to queen
 
 eval:
     call eval_sub                              ;Evaluate move
