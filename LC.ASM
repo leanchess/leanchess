@@ -95,6 +95,7 @@ read_square_sub:
     shl ax, 4                                  ;Multiply by 16
     sub di, ax                                 ;Subtract result from base address
     ret
+read_end:
 
 ;Calculate gain
 ;Input:
@@ -105,23 +106,25 @@ read_square_sub:
 ;  CH - Updated total gain
 gain_sub:
     and al, 07h                                ;Isolate piece type
-    pusha                                      ;Save piece type and colors
+    push ax                                    ;Save piece type
+    push bx                                    ;Save player's and opponent's colors
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get piece's value
     add ch, al                                 ;Add to total gain
-    popa                                       ;Restore piece type and colors
+    pop bx                                     ;Restore player's and opponent's colors
+    pop ax                                     ;Restore piece type
     ret
-read_end:
+gain_end:
 
 ;Evaluate move
 ;Input:
 ;  AH - Promoted piece type
 ;  BL - Player's color + border
 ;  BH - Opponent's color + border
-;  BP - Source square address
 ;  CX - Destination counter
 ;  DL - Source piece type
 ;  DH - Source square contents + moved
+;  BP - Source square address
 ;  DI - Destination square address
 ;Output:
 ;  AH - Promoted piece type
