@@ -266,8 +266,8 @@ move_dest:
 next:
     mov ah, -64                                ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 30               ;Start from top left corner
-    mov cl, 78                                 ;Ranks * width - margin width
+    mov bp, offset board_db + 30h              ;Start from top left corner
+    mov cl, 78h                                ;Ranks * width - margin width
 
 src_loop:
     push cx                                    ;Save source counter
