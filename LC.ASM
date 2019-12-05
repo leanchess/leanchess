@@ -247,11 +247,6 @@ src_cont:
     ret
 play_end:
 
-init_db:
-    db 08h, 08h, 08h, 0A6h, 0A2h, 0A3h, 0A5h, 0A7h, 0A3h, 0A2h, 0A6h
-    db 24h, 00h, 00h, 00h, 00h, 14h
-    db 96h, 92h, 93h, 95h, 97h, 93h, 92h, 96h, 08h, 08h
-
 moves_db:
     moves_knight db 1, vec_knight - moves_knight - 2
     moves_bishop db 7, vec_bishop - moves_bishop - 2
@@ -271,7 +266,12 @@ vec_pawn:
 eval_db: ;Fall through 1 byte
     db 0, 0, 3, 3, 1, 9, 5, 46
 
-board_db:
+init_db:
+    db 08h, 08h, 08h, 0A6h, 0A2h, 0A3h, 0A5h, 0A7h, 0A3h, 0A2h, 0A6h
+    db 24h, 00h, 00h, 00h, 00h, 14h
+    db 96h, 92h, 93h, 95h, 97h, 93h, 92h, 96h
+
+board_db: ;Fall through 2 bytes
 
 code ends
 end start
