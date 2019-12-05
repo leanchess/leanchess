@@ -110,10 +110,60 @@ gain_sub:
     xlat                                       ;Get piece's value
     add ch, al                                 ;Add to total gain
     popa                                       ;Restore piece type and colors
+    ret
+read_end:
+
+;Evaluate move
+;Input:
+;  AH - Promoted piece type
+;  BL - Player's color + border
+;  BH - Opponent's color + border
+;  BP - Source square address
+;  CX - Destination counter
+;  DL - Source piece type
+;  DH - Source square contents + moved
+;  DI - Destination square address
+;Output:
+;  AH - Promoted piece type
+;  BL - Player's color + border
+;  BH - Opponent's color + border
+;  CX - Destination counter
+;  DL - Source piece type
+;  DH - Source square contents + moved
+;  BP - Source square address
+;  DI - Destination square address
+;  ZF = 0 if OK to move to next destination
+eval_sub:
+    pusha                                      ;Save all GP registers
+    push bp                                    ;Save source square address
+    push di                                    ;Save destination square address
+    
+    mov si, sp                                 ;Clone stack pointer
+    mov cx, [si + 38]                          ;Read current depth
+    dec cx                                     ;Decrement depth
+    call auto_move_sub                         ;Perform move and find next best move
+    mov ah, [si + 41]                          ;Read player's max value
+    cmp al, ah                                 ;Current value exceeds max value?
+    pop di                                     ;Restore destination square address
+    pop bp                                     ;Restore source square address
+    jl undo                                    ;No, proceed to undo move
+
+best:
+    mov [si + 41], al                          ;Write max value
+    mov [si + 26], di                          ;Write destination square address
+    mov [si + 30], bp                          ;Write source square address
+
+undo:
+    mov [di], dh                               ;Write original destination square
+    mov [bp], dl                               ;Write original source square
+
+undo_cont:
+    test dh, bh                                ;Opponent's piece (or border)?
+    popa                                       ;Restore all GP registers
 
 sub_ret:
     ret
-read_end:
+eval_end:
 
 ;Perform two moves
 ;Input:
@@ -274,31 +324,7 @@ pawn_cont:
     jz vec_cont                                ;No, proceed to next vector
 
 eval:
-    pusha                                      ;Save all GP registers
-    push bp                                    ;Save source square address
-    push di                                    ;Save destination square address
-    
-    mov si, sp                                 ;Clone stack pointer
-    mov cx, [si + 36]                          ;Read current depth
-    dec cx                                     ;Decrement depth
-    call auto_move_sub                         ;Recursively call self
-    mov ah, [si + 39]                          ;Read player's max value
-    cmp al, ah                                 ;Current value exceeds max value?
-    pop di                                     ;Restore destination square address
-    pop bp                                     ;Restore source square address
-    jl undo                                    ;No, proceed to undo move
-
-best:
-    mov [si + 39], al                          ;Write max value
-    mov [si + 24], di                          ;Write destination square address
-    mov [si + 28], bp                          ;Write source square address
-
-undo:
-    mov [di], dh                               ;Write original destination square
-    mov [bp], dl                               ;Write original source square
-    test dh, bh                                ;Opponent's piece (or border)?
-    
-    popa                                       ;Restore all GP registers
+    call eval_sub                              ;Evaluate move
     loopz dest_loop                            ;No, move to next destination
 
 vec_cont:
