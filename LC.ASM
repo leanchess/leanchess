@@ -178,7 +178,7 @@ move_cast_cont:
     sar ax, 1                                  ;Normalize king's vector
     add bp, ax                                 ;Calculate rook's destination address
     mov al, [di]                               ;Read rook's source square
-    sub [di], al                               ;Clear rook's source square
+    and byte ptr [di], 80h                     ;Clear rook's source square
     mov [bp], al                               ;Write rook's destination square
 
 move_king_cont:
