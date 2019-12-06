@@ -172,7 +172,7 @@ dest_loop:
     add di, ax                                 ;Calculate destination square address
     mov ah, [di]                               ;Read destination square
     test ah, bh                                ;Player's piece or border?
-    jnz vec_cont                               ;Yes, proceed to next vector
+    jnz vec_loop                               ;Yes, move to next vector
     
     cmp dl, 03h                                ;Black or white pawn?
     jge eval                                   ;No, proceed to evaluate move
@@ -186,7 +186,7 @@ pawn_inv:
 
 pawn_cont:
     test ah, bl                                ;Opponent's piece (or border)?
-    jz vec_cont                                ;No, proceed to next vector
+    jz vec_loop                                ;No, move to next vector
 
 eval:
     pusha                                      ;Save all GP registers
@@ -214,12 +214,10 @@ undo:
     test dh, bh                                ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
-    jnz vec_cont                               ;Yes, proceed to next vector
+    jnz vec_loop                               ;Yes, move to next vector
     
     cmp dl, 04h                                ;Sliding piece?
     jg dest_loop                               ;Yes, move to next destination
-
-vec_cont:
     jmp vec_loop                               ;Move to next vector
     
 src_cont:
