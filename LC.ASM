@@ -26,6 +26,8 @@ start:
 
 init_loop:
     push cx                                    ;Save row counter
+    mov ax, 0A0Dh                              ;AL=CR, AH=LF
+    stosw                                      ;Write two bytes
     mov cl, 8                                  ;Set square counter
     lodsb                                      ;Read one byte
     test al, 80h                               ;First rank?
@@ -35,14 +37,12 @@ init_loop:
     
 init_cont:
     rep stosb                                  ;Write row
-    mov ax, 0A0Dh                              ;AL=CR, AH=LF
-    stosw                                      ;Write two bytes
     pop cx                                     ;Restore row counter
     loop init_loop                             ;Move to next row
 
 main_loop:
     mov cl, 92                                 ;(Ranks + 1) * width + margin width + CRLF
-    mov si, offset board_db + 18               ;Grab preceding CR/LF
+    mov si, offset board_db + 10               ;Grab preceding CR/LF
     mov dx, di                                 ;Clone buffer address
 
 disp_loop:
@@ -82,7 +82,7 @@ read_move_sub:
 ;Output:
 ;  DI - Square address
 read_square_sub:
-    mov di, offset board_db + 109 - 15Fh       ;Bottom right corner + margin - ASCII offset
+    mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
     add di, ax                                 ;Add result to base address
@@ -139,7 +139,7 @@ move_sub:
 next:
     mov ah, -64                                ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 107              ;Start from bottom right corner
+    mov bp, offset board_db + 99               ;Start from bottom right corner
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
@@ -256,11 +256,11 @@ eval_db: ;Fall through 1 byte
     db 0, 0, 3, 3, 1, 9, 5, 46
 
 init_db:
-    db 08h, 08h, 08h, 0A6h, 0A2h, 0A3h, 0A5h, 0A7h, 0A3h, 0A2h, 0A6h
+    db 08h, 08h, 0A6h, 0A2h, 0A3h, 0A5h, 0A7h, 0A3h, 0A2h, 0A6h
     db 24h, 00h, 00h, 00h, 00h, 14h
     db 96h, 92h, 93h, 95h, 97h, 93h, 92h, 96h
 
-board_db: ;Fall through 2 bytes
+board_db: ;Fall through 3 bytes
 
 code ends
 end start
