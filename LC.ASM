@@ -156,7 +156,6 @@ next:
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
-    push cx                                    ;Save source counter
     mov al, [bp]                               ;Read source square
     test al, bl                                ;Opponent's piece or border?
     jnz src_cont                               ;Yes, proceed to next source square
@@ -165,11 +164,8 @@ src_loop:
     jz src_cont                                ;No piece, proceed to next source square
     
     mov dl, al                                 ;Save piece type
-    shl ax, 1                                  ;Two bytes per piece type
-    mov si, offset moves_wpawn - 2             ;Set base metadata address
+    mov si, offset moves_wpawn - 1             ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
-    lodsb                                      ;Read range
-    mov cl, al                                 ;Clone range
     lodsb                                      ;Read relative vectors address
     add si, ax                                 ;Calculate absolute vectors address
 
@@ -178,7 +174,6 @@ vec_loop:
     or al, al                                  ;Zero vector?
     jz src_cont                                ;Yes, proceed to next source square
     
-    push cx                                    ;Save range
     mov di, bp                                 ;Clone source square address
 
 dest_loop:
@@ -208,19 +203,19 @@ eval:
     push di                                    ;Save destination square address
     
     mov si, sp                                 ;Clone stack pointer
-    mov cx, [si + 36]                          ;Read current depth
+    mov cx, [si + 32]                          ;Read current depth
     dec cx                                     ;Decrement depth
     call move_sub                              ;Recursively call self
-    mov ah, [si + 39]                          ;Read player's max value
+    mov ah, [si + 35]                          ;Read player's max value
     cmp al, ah                                 ;Current value exceeds max value?
     pop di                                     ;Restore destination square address
     pop bp                                     ;Restore source square address
     jle undo                                   ;No, proceed to undo move
 
 best:
-    mov [si + 39], al                          ;Write max value
-    mov [si + 24], di                          ;Write destination square address
-    mov [si + 28], bp                          ;Write source square address
+    mov [si + 35], al                          ;Write max value
+    mov [si + 20], di                          ;Write destination square address
+    mov [si + 24], bp                          ;Write source square address
 
 undo:
     mov [di], dh                               ;Write original destination square
@@ -228,15 +223,16 @@ undo:
     test dh, bh                                ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
-    loopz dest_loop                            ;No, move to next destination
+    jnz vec_cont                               ;Yes, proceed to next vector
+    
+    cmp dl, 04h                                ;Sliding piece?
+    jg dest_loop                               ;Yes, move to next destination
 
 vec_cont:
-    pop cx                                     ;Restore range
     jmp vec_loop                               ;Move to next vector
     
 src_cont:
     dec bp                                     ;Decrement source square address
-    pop cx                                     ;Restore source counter
     loop src_loop                              ;Move to next source
     
     popa                                       ;Restore all GP registers
@@ -245,13 +241,13 @@ src_cont:
 play_end:
 
 moves_db:
-    moves_wpawn  db 1, vec_wpawn  - moves_wpawn  - 2
-    moves_bpawn  db 1, vec_bpawn  - moves_bpawn  - 2
-    moves_knight db 1, vec_knight - moves_knight - 2
-    moves_bishop db 7, vec_bishop - moves_bishop - 2
-    moves_rook   db 7, vec_rook   - moves_rook   - 2
-    moves_queen  db 7, vec_king   - moves_queen  - 2
-    moves_king   db 1, vec_king   - moves_king   - 2
+    moves_wpawn  db vec_wpawn  - moves_wpawn  - 1
+    moves_bpawn  db vec_bpawn  - moves_bpawn  - 1
+    moves_king   db vec_king   - moves_king   - 1
+    moves_knight db vec_knight - moves_knight - 1
+    moves_bishop db vec_bishop - moves_bishop - 1
+    moves_rook   db vec_rook   - moves_rook   - 1
+    moves_queen  db vec_king   - moves_queen  - 1
 
 vec_pawn:
     vec_wpawn    db -11,  -9, -10,   0
@@ -262,15 +258,15 @@ vec_pawn:
     vec_rook     db  10,   1,  -1, -10
 
 eval_db: ;Fall through 1 byte
-    db 0, 1, 1, 3, 3, 5, 9
+    db 0, 1, 1, 46, 3, 3, 5, 9
 
-disp_db: ;Fall through 1 byte
-    db 46, "PpNBRQK"
+disp_db:
+    db ".PpKNBRQ"
     
 init_db:
-    db 08h, 08h, 08h, 0A5h, 0A3h, 0A4h, 0A6h, 0A7h, 0A4h, 0A3h, 0A5h
+    db 08h, 08h, 08h, 0A6h, 0A4h, 0A5h, 0A7h, 0A3h, 0A5h, 0A4h, 0A6h
     db 22h, 00h, 00h, 00h, 00h, 11h
-    db 95h, 93h, 94h, 96h, 97h, 94h, 93h, 95h
+    db 96h, 94h, 95h, 97h, 93h, 95h, 94h, 96h
 
 board_db: ;Fall through 2 bytes
 
