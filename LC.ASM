@@ -224,9 +224,9 @@ undo:
     popa                                       ;Restore all GP registers
     jnz vec_loop                               ;Yes, move to next vector
     
-    cmp dl, 04h                                ;Sliding piece?
-    jg dest_loop                               ;Yes, move to next destination
-    jmp vec_loop                               ;Move to next vector
+    test dl, dl                                ;Check piece type
+    jp dest_loop                               ;Slider, move to next destination
+    jmp vec_loop                               ;Crawler, move to next vector
     
 src_cont:
     dec bp                                     ;Decrement source square address
@@ -241,11 +241,11 @@ moves_db:
     moves_null   db vec_null   - moves_null   - 1
     moves_wpawn  db vec_wpawn  - moves_wpawn  - 1
     moves_bpawn  db vec_bpawn  - moves_bpawn  - 1
-    moves_king   db vec_king   - moves_king   - 1
-    moves_knight db vec_knight - moves_knight - 1
     moves_bishop db vec_bishop - moves_bishop - 1
+    moves_knight db vec_knight - moves_knight - 1
     moves_rook   db vec_rook   - moves_rook   - 1
     moves_queen  db vec_king   - moves_queen  - 1
+    moves_king   db vec_king   - moves_king   - 1
 
 vec_pawn:
     vec_wpawn    db -11,  -9, -10,   0
@@ -257,15 +257,15 @@ vec_pawn:
 
 eval_db: ;Fall through 1 byte
 vec_null:
-    db 0, 1, 1, 46, 3, 3, 5, 9
+    db 0, 1, 1, 3, 3, 5, 9
 
-disp_db:
-    db ".PpKNBRQ"
+disp_db: ;Fall through 1 byte
+    db ".PpBNRQK"
     
 init_db:
-    db 08h, 08h, 0A6h, 0A4h, 0A5h, 0A7h, 0A3h, 0A5h, 0A4h, 0A6h
+    db 08h, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
     db 22h, 00h, 00h, 00h, 00h, 11h
-    db 96h, 94h, 95h, 97h, 93h, 95h, 94h, 96h
+    db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
 
 board_db: ;Fall through 3 bytes
 
