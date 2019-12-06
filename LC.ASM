@@ -41,7 +41,7 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
-    mov cl, 83                                 ;Ranks * width + margin width + safety
+    mov cl, 60h                                ;Ranks * width + margin width + safety
     mov si, offset board_db + 28               ;Grab preceding CR/LF
     mov bp, di                                 ;Clone buffer address
     push cx                                    ;Save output length
@@ -65,7 +65,7 @@ disp_cont:
     
     pop cx                                     ;Restore output length
     mov ah, 13h                                ;Write string
-    mov bx, 0007h                              ;Dark gray on black
+    mov bx, cx                                 ;Black on brown
     int 10h                                    ;BIOS output function
 
     push bp                                    ;Save buffer address
