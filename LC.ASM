@@ -280,10 +280,8 @@ src_loop:
     
     mov dh, al                                 ;Save source square
     and ax, 07h                                ;Isolate piece type
-    jz src_cont                                ;No piece, proceed to next source square
-    
     mov dl, al                                 ;Save piece type
-    mov si, offset moves_wpawn - 1             ;Set base metadata address
+    mov si, offset moves_db                    ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
     lodsb                                      ;Read relative vectors address
     add si, ax                                 ;Calculate absolute vectors address
@@ -349,6 +347,7 @@ src_cont:
 play_end:
 
 moves_db:
+    moves_null   db vec_null   - moves_null   - 1
     moves_wpawn  db vec_wpawn  - moves_wpawn  - 1
     moves_bpawn  db vec_bpawn  - moves_bpawn  - 1
     moves_king   db vec_king   - moves_king   - 1
@@ -366,6 +365,7 @@ vec_pawn:
     vec_rook     db 010h, 001h, 0FFh, 0F0h
 
 eval_db: ;Fall through 1 byte
+vec_null:
     db 0, 1, 1, 46, 3, 3, 5, 9
 
 disp_db:
