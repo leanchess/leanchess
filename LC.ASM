@@ -26,6 +26,8 @@ start:
 
 init_loop:
     push cx                                    ;Save row counter
+    mov ax, 0A0Dh                              ;AL=CR, AH=LF
+    stosw                                      ;Write two bytes
     mov cl, 8                                  ;Set square counter
     lodsb                                      ;Read one byte
     test al, 80h                               ;First rank?
@@ -35,14 +37,12 @@ init_loop:
     
 init_cont:
     rep stosb                                  ;Write row
-    mov ax, 0A0Dh                              ;AL=CR, AH=LF
-    stosw                                      ;Write two bytes
     pop cx                                     ;Restore row counter
     loop init_loop                             ;Move to next row
 
 main_loop:
     mov cl, 60h                                ;Ranks * width + margin width + safety
-    mov si, offset board_db + 28               ;Grab preceding CR/LF
+    mov si, offset board_db + 12               ;Grab preceding CR/LF
     mov bp, di                                 ;Clone buffer address
     push cx                                    ;Save output length
 
@@ -66,6 +66,7 @@ disp_cont:
     pop cx                                     ;Restore output length
     mov ah, 13h                                ;Write string
     mov bx, cx                                 ;Black on brown
+    xor dx, dx                                 ;Set position to 0,0
     int 10h                                    ;BIOS output function
 
     push bp                                    ;Save buffer address
@@ -87,7 +88,7 @@ read_move_sub:
 ;Output:
 ;  DI - Square address
 read_square_sub:
-    mov di, offset board_db + 109              ;Bottom right corner + margin
+    mov di, offset board_db + 101              ;Bottom right corner + margin
     mov dl, 1                                  ;Set file factor
     call read_coord_sub                        ;Read character and add to address
     mov dl, -10                                ;Set rank factor
@@ -152,7 +153,7 @@ move_sub:
 next:
     mov ah, -64                                ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 107              ;Start from bottom right corner
+    mov bp, offset board_db + 99               ;Start from bottom right corner
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
@@ -264,11 +265,11 @@ disp_db:
     db ".PpKNBRQ"
     
 init_db:
-    db 08h, 08h, 08h, 0A6h, 0A4h, 0A5h, 0A7h, 0A3h, 0A5h, 0A4h, 0A6h
+    db 08h, 08h, 0A6h, 0A4h, 0A5h, 0A7h, 0A3h, 0A5h, 0A4h, 0A6h
     db 22h, 00h, 00h, 00h, 00h, 11h
     db 96h, 94h, 95h, 97h, 93h, 95h, 94h, 96h
 
-board_db: ;Fall through 2 bytes
+board_db: ;Fall through 3 bytes
 
 code ends
 end start
