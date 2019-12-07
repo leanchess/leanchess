@@ -142,19 +142,19 @@ eval_sub:
     push di                                    ;Save destination square address
     
     mov si, sp                                 ;Clone stack pointer
-    mov cx, [si + 38]                          ;Read current depth
+    mov cx, [si + 36]                          ;Read current depth
     dec cx                                     ;Decrement depth
     call move_sub                              ;Perform move and find next best move
-    mov ah, [si + 41]                          ;Read player's max value
+    mov ah, [si + 39]                          ;Read player's max value
     cmp al, ah                                 ;Current value exceeds max value?
     pop di                                     ;Restore destination square address
     pop bp                                     ;Restore source square address
     jl undo                                    ;No, proceed to undo move
 
 best:
-    mov [si + 41], al                          ;Write max value
-    mov [si + 26], di                          ;Write destination square address
-    mov [si + 30], bp                          ;Write source square address
+    mov [si + 39], al                          ;Write max value
+    mov [si + 24], di                          ;Write destination square address
+    mov [si + 28], bp                          ;Write source square address
 
 undo:
     mov [di], dh                               ;Write original destination square
@@ -178,7 +178,7 @@ play_sub:
     call move_sub                              ;Perform move and find best next move
 
 auto_move_sub:
-    mov ah, 06h                                ;Always promote to queen
+    mov ah, 07h                                ;Always promote to queen
 
 ;Perform move and find best next move
 ;Input:
@@ -224,7 +224,7 @@ move_promo_cont:
     dec ch                                     ;Subtract pawn's value
 
 move_cont:
-    cmp al, 07h                                ;King?
+    cmp al, 03h                                ;King?
     jne move_dest                              ;No, proceed to write destination square
 
 move_king:
@@ -283,11 +283,8 @@ src_loop:
     jz src_cont                                ;No piece, proceed to next source square
     
     mov dl, al                                 ;Save piece type
-    shl ax, 1                                  ;Two bytes per piece type
-    mov si, offset moves_wpawn - 2             ;Set base metadata address
+    mov si, offset moves_wpawn - 1             ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
-    lodsb                                      ;Read range
-    mov cl, al                                 ;Clone range
     lodsb                                      ;Read relative vectors address
     add si, ax                                 ;Calculate absolute vectors address
 
@@ -295,8 +292,13 @@ vec_loop:
     lodsb                                      ;Read vector
     or al, al                                  ;Zero vector?
     jz src_cont                                ;Yes, proceed to next source square
+
+    xor cx, cx                                 ;Reset range
+    cmp dl, 04h                                ;Check piece type
+    jg vec_cont                                ;Slider, proceed to square
+    inc cx                                     ;Crawler, limit range
     
-    push cx                                    ;Save range
+vec_cont:
     mov di, bp                                 ;Clone source square address
 
 dest_loop:
@@ -304,7 +306,7 @@ dest_loop:
     add di, ax                                 ;Calculate destination square address
     mov ah, [di]                               ;Read destination square
     test ah, bh                                ;Player's piece or border?
-    jnz vec_cont                               ;Yes, proceed to next vector
+    jnz vec_loop                               ;Yes, move to next vector
     
     cmp dl, 03h                                ;Black or white pawn?
     jge eval                                   ;No, proceed to evaluate move
@@ -324,19 +326,16 @@ pawn_inv:
 
 pawn_cont:
     test ah, bl                                ;Opponent's piece (or border)?
-    jz vec_cont                                ;No, proceed to next vector
+    jz vec_loop                                ;No, move to next vector
 
 eval_knight:
-    mov ah, 03h                                ;Promote to knight
+    mov ah, 04h                                ;Promote to knight
     call eval_sub                              ;Evaluate move
-    mov ah, 06h                                ;Promote to queen
+    mov ah, 07h                                ;Promote to queen
 
 eval:
     call eval_sub                              ;Evaluate move
     loopz dest_loop                            ;No, move to next destination
-
-vec_cont:
-    pop cx                                     ;Restore range
     jmp vec_loop                               ;Move to next vector
     
 src_cont:
@@ -350,13 +349,13 @@ src_cont:
 play_end:
 
 moves_db:
-    moves_wpawn  db 1, vec_wpawn  - moves_wpawn  - 2
-    moves_bpawn  db 1, vec_bpawn  - moves_bpawn  - 2
-    moves_knight db 1, vec_knight - moves_knight - 2
-    moves_bishop db 7, vec_bishop - moves_bishop - 2
-    moves_rook   db 7, vec_rook   - moves_rook   - 2
-    moves_queen  db 7, vec_king   - moves_queen  - 2
-    moves_king   db 1, vec_king   - moves_king   - 2
+    moves_wpawn  db vec_wpawn  - moves_wpawn  - 1
+    moves_bpawn  db vec_bpawn  - moves_bpawn  - 1
+    moves_king   db vec_king   - moves_king   - 1
+    moves_knight db vec_knight - moves_knight - 1
+    moves_bishop db vec_bishop - moves_bishop - 1
+    moves_rook   db vec_rook   - moves_rook   - 1
+    moves_queen  db vec_king   - moves_queen  - 1
 
 vec_pawn:
     vec_wpawn    db 0EFh, 0F1h, 0F0h, 0
@@ -367,15 +366,15 @@ vec_pawn:
     vec_rook     db 010h, 001h, 0FFh, 0F0h
 
 eval_db: ;Fall through 1 byte
-    db 0, 1, 1, 3, 3, 5, 9
+    db 0, 1, 1, 46, 3, 3, 5, 9
 
-disp_db: ;Fall through 1 byte
-    db 46, "PpNBRQK", 0Ah
+disp_db:
+    db ".PpKNBRQ", 0Ah
     
 init_db:
-    db 08h, 08h, 08h, 0A5h, 0A3h, 0A4h, 0A6h, 0A7h, 0A4h, 0A3h, 0A5h
+    db 08h, 08h, 08h, 0A6h, 0A4h, 0A5h, 0A7h, 0A3h, 0A5h, 0A4h, 0A6h
     db 22h, 00h, 00h, 00h, 00h, 11h
-    db 95h, 93h, 94h, 96h, 97h, 94h, 93h, 95h
+    db 96h, 94h, 95h, 97h, 93h, 95h, 94h, 96h
 
 board_db: ;Fall through 2 bytes
 
