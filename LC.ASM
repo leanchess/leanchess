@@ -20,7 +20,6 @@ code segment
     
 start:
     int 10h                                    ;BIOS display mode 0
-    mov cl, 13                                 ;Set row count
     mov si, offset init_db                     ;Set row metadata address
     mov di, offset board_db                    ;Set board address
 
