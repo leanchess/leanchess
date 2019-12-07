@@ -349,11 +349,6 @@ src_cont:
     ret
 play_end:
 
-init_db:
-    db 08h, 08h, 08h, 0A5h, 0A3h, 0A4h, 0A6h, 0A7h, 0A4h, 0A3h, 0A5h
-    db 22h, 00h, 00h, 00h, 00h, 11h
-    db 95h, 93h, 94h, 96h, 97h, 94h, 93h, 95h, 08h, 08h
-
 moves_db:
     moves_wpawn  db 1, vec_wpawn  - moves_wpawn  - 2
     moves_bpawn  db 1, vec_bpawn  - moves_bpawn  - 2
@@ -377,7 +372,12 @@ eval_db: ;Fall through 1 byte
 disp_db: ;Fall through 1 byte
     db 46, "PpNBRQK", 0Ah
     
-board_db:
+init_db:
+    db 08h, 08h, 08h, 0A5h, 0A3h, 0A4h, 0A6h, 0A7h, 0A4h, 0A3h, 0A5h
+    db 22h, 00h, 00h, 00h, 00h, 11h
+    db 95h, 93h, 94h, 96h, 97h, 94h, 93h, 95h
+
+board_db: ;Fall through 2 bytes
 
 code ends
 end start
