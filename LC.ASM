@@ -160,6 +160,30 @@ undo:
     mov [di], dh                               ;Write original destination square
     mov [bp], dl                               ;Write original source square
 
+    cmp dl, 03h                                ;King?
+    jne undo_cont                              ;No, proceed to check destination square
+
+undo_king:
+    pusha                                      ;Save king's move parameters
+    mov ax, di                                 ;Clone destination square address
+    sub ax, bp                                 ;Calculate king's vector
+    cmp al, 0FEh                               ;Queenside castling?
+    je undo_cast_cont                          ;Yes, proceed to calculate rook's move
+    cmp al, 02h                                ;Kingside castling?
+    jne undo_king_cont                         ;No, proceed to restore king's move
+    dec di                                     ;Decrement source address
+
+undo_cast_cont:
+    add di, ax                                 ;Calculate rook's source address
+    sar ax, 1                                  ;Normalize king's vector
+    add bp, ax                                 ;Calculate rook's destination address
+    mov al, [bp]                               ;Read rook's destination square
+    and byte ptr [bp], 80h                     ;Clear rook's destination square
+    mov [di], al                               ;Write rook's source square
+
+undo_king_cont:
+    popa                                       ;Restore king's move parameters
+
 undo_cont:
     test dh, bh                                ;Opponent's piece (or border)?
     popa                                       ;Restore all GP registers
