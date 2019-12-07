@@ -101,8 +101,6 @@ read_coord_sub:
     and al, 0Fh                                ;Isolate number (expected 1-8)
     imul dl                                    ;Multiply signed
     add di, ax                                 ;Add result to base address
-
-sub_ret:
     ret
 read_end:
 
@@ -144,7 +142,7 @@ move_sub:
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get player's gain
     pop bx                                     ;Restore player's and opponent's colors
-    jcxz sub_ret                               ;If depth is zero, return
+    jcxz move_cont                             ;If depth is zero, return
 
 next:
     mov ah, -64                                ;Initialize opponent's max value
@@ -237,6 +235,8 @@ src_cont:
     
     popa                                       ;Restore all GP registers
     sub al, ah                                 ;Calculate player's max value
+
+move_cont:
     ret
 play_end:
 
