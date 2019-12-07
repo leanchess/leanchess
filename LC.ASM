@@ -187,8 +187,6 @@ undo_king_cont:
 undo_cont:
     test dh, bh                                ;Opponent's piece (or border)?
     popa                                       ;Restore all GP registers
-
-sub_ret:
     ret
 eval_end:
 
@@ -283,9 +281,9 @@ move_dest:
 
     xchg bl, bh                                ;Swap player's and opponent's colors
     xor ch, ch                                 ;Clear depth's upper byte
-    jcxz sub_ret                               ;If depth is zero, return
+    jcxz move_cont                             ;If depth is zero, return
     cmp al, 46                                 ;King captured?
-    jge sub_ret                                ;If yes, return
+    jge move_cont                              ;If yes, return
 
 next:
     mov ah, -64                                ;Initialize opponent's max value
@@ -364,6 +362,8 @@ src_cont:
     
     popa                                       ;Restore all GP registers
     sub al, ah                                 ;Calculate player's max value
+
+move_cont:
     ret
 play_end:
 
