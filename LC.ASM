@@ -203,8 +203,9 @@ move_sub:
     and byte ptr [bp], 80h                     ;Clear source square
     mov al, dl                                 ;Clone source square contents
     and al, 07h                                ;Isolate piece type
-    cmp al, 03h                                ;Black or white pawn?
-    jge move_cont                              ;No, proceed to kingdom check
+    cmp al, 03h                                ;King or pawn?
+    je move_king                               ;King, proceed to special move checks
+    jg move_dest                               ;Other, proceed to write destination square
 
 move_pawn:
     test dh, 80h                               ;Promotion destination?
@@ -222,10 +223,6 @@ move_promo_read:
 move_promo_cont:
     call gain_sub                              ;Calculate promotion gain
     dec ch                                     ;Subtract pawn's value
-
-move_cont:
-    cmp al, 03h                                ;King?
-    jne move_dest                              ;No, proceed to write destination square
 
 move_king:
     pusha                                      ;Save king's move parameters
