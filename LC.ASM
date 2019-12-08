@@ -159,7 +159,8 @@ vec_loop:
     lodsb                                      ;Read vector
     or al, al                                  ;Zero vector?
     jz src_cont                                ;Yes, proceed to next source square
-    
+
+sign_loop:
     mov di, bp                                 ;Clone source square address
 
 dest_loop:
@@ -167,7 +168,7 @@ dest_loop:
     add di, ax                                 ;Calculate destination square address
     mov ah, [di]                               ;Read destination square
     test ah, bh                                ;Player's piece or border?
-    jnz vec_loop                               ;Yes, move to next vector
+    jnz vec_cont                               ;Yes, proceed to next vector
     
     cmp dl, 04h                                ;Black or white pawn?
     jne eval                                   ;No, proceed to evaluate move
@@ -181,13 +182,13 @@ pawn_inv:
 
 pawn_cont:
     test ah, bl                                ;Opponent's piece (or border)?
-    jz vec_loop                                ;No, move to next vector
+    jz vec_cont                                ;No, proceed to next vector
 
     mov ah, al                                 ;Clone vector
     and ah, 80h                                ;Isolate sign bit
     shr ah, 2                                  ;Align with black bit
     xor ah, bh                                 ;Flip color and border bits
-    jnp vec_loop                               ;Odd, move to next vector
+    jnp vec_cont                               ;Odd, proceed to next vector
 
 eval:
     pusha                                      ;Save all GP registers
@@ -215,11 +216,15 @@ undo:
     test dh, bh                                ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
-    jnz vec_loop                               ;Yes, move to next vector
+    jnz vec_cont                               ;Yes, proceed to next vector
     
     test dl, dl                                ;Check piece type
     jp dest_loop                               ;Slider, move to next destination
-    jmp vec_loop                               ;Crawler, move to next vector
+
+vec_cont:
+    neg al                                     ;Invert vector
+    js sign_loop                               ;Negative, proceed to reset destination address
+    jmp vec_loop                               ;Positive, move to next vector
     
 src_cont:
     dec bp                                     ;Decrement source square address
@@ -239,12 +244,11 @@ moves_db:
     moves_king   db vec_king   - moves_king   - 1
 
 vec_pawn:
-    vec_wpawn    db -11,  -9, -10
     vec_bpawn    db   9,  11,  10,   0
-    vec_knight   db  19,  21,   8,  12, -21, -12, -19,  -8,   0
-    vec_bishop   db   9,  11, -11,  -9,   0
-    vec_king     db   9,  11, -11,  -9
-    vec_rook     db  10,   1,  -1, -10
+    vec_knight   db  19,  21,   8,  12,   0
+    vec_bishop   db   9,  11,   0
+    vec_king     db   9,  11
+    vec_rook     db  10,   1
 
 eval_db: ;Fall through 1 byte
     db 0, 0, 3, 3, 1, 9, 5, 46
