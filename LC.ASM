@@ -397,7 +397,7 @@ moves_db:
     moves_rook   db vec_rook   - moves_rook   - 1
     moves_queen  db vec_king   - moves_queen  - 1
 
-    vec_wpawn    db 0EFh, 0F1h, 0F0h, 0
+    vec_wpawn    db 0F0h, 0EFh, 0F1h, 0
     vec_knight   db 01Fh, 021h, 00Eh, 012h, 0
     vec_bpawn    db 010h
     vec_bishop   db 00Fh, 011h, 0
