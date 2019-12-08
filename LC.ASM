@@ -325,10 +325,10 @@ vec_loop:
 
     xor cx, cx                                 ;Reset range
     cmp dl, 04h                                ;Check piece type
-    jg vec_cont                                ;Slider, proceed to square
+    jg sign_loop                               ;Slider, proceed to reset destination address
     inc cx                                     ;Crawler, limit range
-    
-vec_cont:
+
+sign_loop:
     mov di, bp                                 ;Clone source square address
 
 dest_loop:
@@ -336,7 +336,7 @@ dest_loop:
     add di, ax                                 ;Calculate destination square address
     mov ah, [di]                               ;Read destination square
     test ah, bh                                ;Player's piece or border?
-    jnz vec_loop                               ;Yes, move to next vector
+    jnz vec_cont                               ;Yes, proceed to next vector
     
     cmp dl, 03h                                ;Black or white pawn?
     jge eval                                   ;No, proceed to evaluate move
@@ -366,8 +366,15 @@ eval_knight:
 eval:
     call eval_sub                              ;Evaluate move
     loopz dest_loop                            ;No, move to next destination
+
+vec_cont:
+    cmp dl, 03h                                ;Black or white pawn?
+    jl vec_loop                                ;Yes, move to next vector
+
+    neg al                                     ;Invert vector
+    js sign_loop                               ;Negative, proceed to reset destination address
     jmp vec_loop                               ;Move to next vector
-    
+
 src_cont:
     inc bp                                     ;Increment source square address
     pop cx                                     ;Restore source counter
@@ -393,10 +400,10 @@ moves_db:
 vec_pawn:
     vec_wpawn    db 0EFh, 0F1h, 0F0h, 0
     vec_bpawn    db 00Fh, 011h, 010h, 0
-    vec_knight   db 01Fh, 021h, 00Eh, 012h, 0DFh, 0E1h, 0EEh, 0F2h, 0
-    vec_bishop   db 00Fh, 011h, 0EFh, 0F1h, 0
-    vec_king     db 00Fh, 011h, 0EFh, 0F1h
-    vec_rook     db 010h, 001h, 0FFh, 0F0h
+    vec_knight   db 01Fh, 021h, 00Eh, 012h, 0
+    vec_bishop   db 00Fh, 011h, 0
+    vec_king     db 00Fh, 011h
+    vec_rook     db 010h, 001h
 
 eval_db: ;Fall through 1 byte
 vec_null:
