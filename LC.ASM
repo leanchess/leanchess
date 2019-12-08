@@ -184,10 +184,11 @@ pawn_cont:
     test ah, bl                                ;Opponent's piece (or border)?
     jz vec_cont                                ;No, proceed to next vector
 
-    mov ah, al                                 ;Clone vector
-    and ah, 80h                                ;Isolate sign bit
-    shr ah, 2                                  ;Align with black bit
-    xor ah, bh                                 ;Flip color and border bits
+    push ax                                    ;Save vector
+    and al, 80h                                ;Isolate sign bit
+    shr al, 2                                  ;Align with black bit
+    xor al, bh                                 ;Flip color and border bits
+    pop ax                                     ;Restore vector
     jnp vec_cont                               ;Odd, proceed to next vector
 
 eval:
