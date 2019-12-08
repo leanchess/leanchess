@@ -244,7 +244,7 @@ moves_db:
     moves_queen  db vec_king   - moves_queen  - 1
     moves_king   db vec_king   - moves_king   - 1
 
-    vec_wpawn    db -11,  -9, -10,   0
+    vec_wpawn    db -10, -11,  -9,   0
     vec_knight   db  19,  21,   8,  12,   0
     vec_bpawn    db  10
     vec_bishop   db   9,  11,   0
