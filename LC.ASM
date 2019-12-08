@@ -190,6 +190,12 @@ undo_cont:
     ret
 eval_end:
 
+move_cast_undo:
+    popa                                       ;Restore king's move parameters
+    mov [di], dh                               ;Write original destination square
+    mov [bp], dl                               ;Write original source square
+    ret
+
 ;Perform two moves
 ;Input:
 ;  BP - Source square address
@@ -258,6 +264,13 @@ move_king:
 
 move_cast_cont:
     add di, ax                                 ;Calculate rook's source address
+    push ax                                    ;Save king's vector
+    mov ax, [di]                               ;Read rook's source square and next square
+    and ax, 774Fh                              ;Filter out colors + promo and border + promo
+    cmp ax, 0006h                              ;Unmoved rook and vacant square?
+    pop ax                                     ;Restore king's vector
+    jne move_cast_undo                         ;No, proceed to undo king's move
+
     sar ax, 1                                  ;Normalize king's vector
     add bp, ax                                 ;Calculate rook's destination address
     mov al, [di]                               ;Read rook's source square
