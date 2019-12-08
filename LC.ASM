@@ -195,10 +195,11 @@ pawn_cont:
     test ah, bl                                ;Opponent's piece (or border)?
     jz vec_cont                                ;No, proceed to next vector
 
-    mov ah, al                                 ;Clone vector
-    and ah, 80h                                ;Isolate sign bit
-    shr ah, 2                                  ;Align with black bit
-    xor ah, bh                                 ;Flip color and border bits
+    push ax                                    ;Save vector
+    and al, 80h                                ;Isolate sign bit
+    shr al, 2                                  ;Align with black bit
+    xor al, bh                                 ;Flip color and border bits
+    pop ax                                     ;Restore vector
     jnp vec_cont                               ;Odd, proceed to next vector
 
 eval:
@@ -254,9 +255,8 @@ moves_db:
     moves_rook   db vec_rook   - moves_rook   - 1
     moves_king   db vec_king   - moves_king   - 1
 
-vec_pawn:
-    vec_bpawn    db   9,  11,  10,   0
     vec_knight   db  19,  21,   8,  12,   0
+    vec_pawn     db  10
     vec_bishop   db   9,  11,   0
     vec_king     db   9,  11
     vec_rook     db  10,   1
