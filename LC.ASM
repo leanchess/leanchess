@@ -231,8 +231,8 @@ vec_cont:
 
     neg al                                     ;Invert vector
     js sign_loop                               ;Negative, proceed to reset destination address
-    jmp vec_loop                               ;Positive, move to next vector
-    
+    jnz vec_loop                               ;Non-zero, move to next vector
+
 src_cont:
     dec bp                                     ;Decrement source square address
     loop src_loop                              ;Move to next source
