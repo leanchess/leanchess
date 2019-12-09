@@ -157,8 +157,6 @@ src_loop:
 
 vec_loop:
     lodsb                                      ;Read vector
-    or al, al                                  ;Zero vector?
-    jz src_cont                                ;Yes, proceed to next source square
 
 sign_loop:
     mov di, bp                                 ;Clone source square address
@@ -225,8 +223,8 @@ undo:
 vec_cont:
     neg al                                     ;Invert vector
     js sign_loop                               ;Negative, proceed to reset destination address
-    jmp vec_loop                               ;Positive, move to next vector
-    
+    jnz vec_loop                               ;Non-zero, move to next vector
+
 src_cont:
     dec bp                                     ;Decrement source square address
     loop src_loop                              ;Move to next source
