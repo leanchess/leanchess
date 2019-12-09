@@ -71,9 +71,9 @@ disp_done:
     int 10h                                    ;BIOS output function
 
 play:
-    mov bx, 1828h                              ;Set player's and opponent's colors
-    mov cl, 3                                  ;Set search depth
     push bp                                    ;Save buffer address
+    mov dx, 1828h                              ;Set player's and opponent's colors
+    mov cl, 3                                  ;Set search depth
     push offset main_loop                      ;Repeat forever
     mov ax, offset move_sub                    ;Perform two moves:
     push ax                                    ;Perform computer's move
@@ -86,13 +86,13 @@ play:
 read_square_sub:
     mov bp, di                                 ;Clone address
     mov di, offset board_db + 101              ;Bottom right corner + margin
-    mov dl, 1                                  ;Set file factor
+    mov bl, 1                                  ;Set file factor
     call read_coord_sub                        ;Read character and add to address
-    mov dl, -10                                ;Set rank factor
+    mov bl, -10                                ;Set rank factor
     
 ;Read coordinate from input and update square address
 ;Input:
-;  DL - Multiplication factor
+;  BL - Multiplication factor
 ;  DI - Base square address
 ;Output:
 ;  DI - Updated square address
@@ -100,7 +100,7 @@ read_coord_sub:
     xor ah, ah                                 ;Read character
     int 16h                                    ;BIOS input function
     and al, 0Fh                                ;Isolate number (expected 1-8)
-    imul dl                                    ;Multiply signed
+    imul bl                                    ;Multiply signed
     add di, ax                                 ;Add result to base address
 
 sub_ret:
@@ -109,33 +109,30 @@ read_end:
 
 ;Perform move and find best next move
 ;Input:
-;  BL - Player's color + border
-;  BH - Opponent's color + border
+;  DL - Player's color + border
+;  DH - Opponent's color + border
 ;  CX - Search depth
 ;  BP - Source square address
 ;  DI - Destination square address
 ;Output:
 ;  AL - Player's max value
 ;  AH - Opponent's max value
-;  BL - Opponent's color + border
-;  BH - Player's color + border
-;  DL - Original source square contents
-;  DH - Original destination square contents
+;  BL - Original destination square contents
+;  DL - Opponent's color + border
+;  DH - Player's color + border
 ;  BP - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
     mov ax, 0C000h                             ;Clear contents + opponent's max value
     xchg al, [bp]                              ;Read and write source square
-    mov dl, al                                 ;Clone source square contents
     xchg al, [di]                              ;Read and write destination square
-    mov dh, al                                 ;Clone destination square contents
-    xchg bl, bh                                ;Swap player's and opponent's colors
+    push ax                                    ;Save destination square contents
+    xchg dl, dh                                ;Swap player's and opponent's colors
     
-    push bx                                    ;Save player's and opponent's colors
     and al, 07h                                ;Isolate piece type
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get player's gain
-    pop bx                                     ;Restore player's and opponent's colors
+    pop bx                                     ;Restore destination square contents
     jcxz sub_ret                               ;If depth is zero, return
 
 next:
@@ -145,13 +142,13 @@ next:
 
 src_loop:
     mov al, [bp]                               ;Read source square
-    test al, bl                                ;Opponent's piece or border?
+    test al, dl                                ;Opponent's piece or border?
     jnz src_cont                               ;Yes, proceed to next source square
     
     and ax, 07h                                ;Isolate piece type
     jz src_cont                                ;No piece, proceed to next source square
     
-    mov dl, al                                 ;Save piece type
+    mov bl, al                                 ;Save piece type
     mov si, offset moves_knight - 2            ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
     lodsb                                      ;Read relative vectors address
@@ -167,10 +164,10 @@ dest_loop:
     cbw                                        ;Extend vector's sign
     add di, ax                                 ;Calculate destination square address
     mov ah, [di]                               ;Read destination square
-    test ah, bh                                ;Player's piece or border?
+    test ah, dh                                ;Player's piece or border?
     jnz vec_cont                               ;Yes, proceed to next vector
     
-    cmp dl, 04h                                ;Black or white pawn?
+    cmp bl, 04h                                ;Black or white pawn?
     jne eval                                   ;No, proceed to evaluate move
 
 pawn:
@@ -181,13 +178,13 @@ pawn_inv:
     xor ah, 30h                                ;Invert destination's color
 
 pawn_cont:
-    test ah, bl                                ;Opponent's piece (or border)?
+    test ah, dl                                ;Opponent's piece (or border)?
     jz vec_cont                                ;No, proceed to next vector
 
     push ax                                    ;Save vector
     and al, 80h                                ;Isolate sign bit
     shr al, 2                                  ;Align with black bit
-    xor al, bh                                 ;Flip color and border bits
+    xor al, dh                                 ;Flip color and border bits
     pop ax                                     ;Restore vector
     jnp vec_cont                               ;Odd, proceed to next vector
 
@@ -212,14 +209,14 @@ best:
     mov [si + 24], bp                          ;Write source square address
 
 undo:
-    mov [di], dh                               ;Write original destination square
-    mov [bp], dl                               ;Write original source square
-    test dh, bh                                ;Opponent's piece (or border)?
+    xchg bl, [di]                              ;Read and write original destination square
+    mov [bp], bl                               ;Write original source square
+    test [di], dh                              ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
     jnz vec_cont                               ;Yes, proceed to next vector
     
-    test dl, dl                                ;Check piece type
+    test bl, bl                                ;Check piece type
     jp dest_loop                               ;Slider, move to next destination
 
 vec_cont:
