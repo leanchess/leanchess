@@ -373,7 +373,7 @@ vec_cont:
 
     neg al                                     ;Invert vector
     js sign_loop                               ;Negative, proceed to reset destination address
-    jmp vec_loop                               ;Move to next vector
+    jnz vec_loop                               ;Non-zero, move to next vector
 
 src_cont:
     inc bp                                     ;Increment source square address
