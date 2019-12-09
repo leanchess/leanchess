@@ -410,10 +410,10 @@ eval_db: ;Fall through 1 byte
     db 0, 1, 1, 46, 3, 3, 5, 9
 
 disp_db:
-    db ".PpKNBRQ", 0Ah
+    db ".PpKNBRQ"
     
-init_db:
-    db 08h, 08h, 08h, 0A6h, 0A4h, 0A5h, 0A7h, 0A3h, 0A5h, 0A4h, 0A6h
+init_db: ;Fall through 1 byte
+    db 0Ah, 08h, 08h, 0A6h, 0A4h, 0A5h, 0A7h, 0A3h, 0A5h, 0A4h, 0A6h
     db 22h, 00h, 00h, 00h, 00h, 11h
     db 96h, 94h, 95h, 97h, 93h, 95h, 94h, 96h
 
