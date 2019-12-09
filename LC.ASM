@@ -123,7 +123,7 @@ play_sub:
 ;  BP - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
-    xor ax, ax                                 ;Clear contents
+    mov ax, 0C000h                             ;Clear contents + opponent's max value
     xchg al, [bp]                              ;Read and write source square
     mov dl, al                                 ;Clone source square contents
     xchg al, [di]                              ;Read and write destination square
@@ -138,7 +138,6 @@ move_sub:
     jcxz move_cont                             ;If depth is zero, return
 
 next:
-    mov ah, -64                                ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
     mov bp, offset board_db + 99               ;Start from bottom right corner
     mov cl, 78                                 ;Ranks * width - margin width
