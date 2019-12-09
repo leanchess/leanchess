@@ -39,9 +39,13 @@ init_cont:
     pop cx                                     ;Restore row counter
     loop init_loop                             ;Move to next row
 
+init_done:
+    push di                                    ;Save buffer address
+
 main_loop:
     mov cl, 92                                 ;(Ranks + 1) * width + margin width + CRLF
     mov si, offset board_db + 10               ;Grab preceding CR/LF
+    pop di                                     ;Restore buffer address
     mov dx, di                                 ;Clone buffer address
 
 disp_loop:
@@ -62,29 +66,25 @@ disp_cont:
     stosb                                      ;Write square
     loop disp_loop                             ;Move to next square
     
+disp_done:
     mov ax, 0924h                              ;String terminator/write string
     stosb                                      ;Write string terminator
     int 21h                                    ;BIOS output function
 
+    mov bx, 1828h                              ;Set player's and opponent's colors
+    mov cl, 3                                  ;Set search depth
     push dx                                    ;Save buffer address
-    call read_move_sub                         ;Read move
-    call play_sub                              ;Perform two moves
-    pop di                                     ;Restore buffer address
-    jmp main_loop                              ;Repeat forever
-main_end:
-
-;Read move from input
-;Output:
-;  BP - Source square address
-;  DI - Destination square address
-read_move_sub:
-    call read_square_sub                       ;Read source square
-    mov bp, di                                 ;Clone address
+    push offset main_loop                      ;Repeat forever
+    mov ax, offset move_sub                    ;Perform two moves:
+    push ax                                    ;Perform computer's move
+    push ax                                    ;Perform human's move
+    push offset read_sub                       ;Read destination square
 
 ;Read square from input
 ;Output:
 ;  DI - Square address
-read_square_sub:
+read_sub:
+    mov bp, di                                 ;Clone address
     mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
@@ -96,15 +96,6 @@ read_square_sub:
     sub di, ax                                 ;Subtract result from base address
     ret
 read_end:
-
-;Perform two moves
-;Input:
-;  BP - Source square address
-;  DI - Destination square address
-play_sub:
-    mov bx, 1828h                              ;Set player's and opponent's colors
-    mov cl, 3                                  ;Set search depth
-    call move_sub                              ;Perform move and find best next move
 
 ;Perform move and find best next move
 ;Input:
@@ -230,12 +221,13 @@ src_cont:
     dec bp                                     ;Decrement source square address
     loop src_loop                              ;Move to next source
     
+move_done:
     popa                                       ;Restore all GP registers
     sub al, ah                                 ;Calculate player's max value
 
 move_cont:
     ret
-play_end:
+move_end:
 
 moves_db:
     moves_pawn   db vec_pawn   - moves_pawn   - 1
