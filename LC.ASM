@@ -108,14 +108,12 @@ read_end:
 ;  AH - Opponent's max value
 ;  BL - Opponent's color + border
 ;  BH - Player's color + border
-;  DL - Original source square contents
 ;  DH - Original destination square contents
 ;  BP - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
     mov ax, 0C000h                             ;Clear contents + opponent's max value
     xchg al, [bp]                              ;Read and write source square
-    mov dl, al                                 ;Clone source square contents
     xchg al, [di]                              ;Read and write destination square
     mov dh, al                                 ;Clone destination square contents
     xchg bl, bh                                ;Swap player's and opponent's colors
@@ -201,9 +199,9 @@ best:
     mov [si + 24], bp                          ;Write source square address
 
 undo:
-    mov [di], dh                               ;Write original destination square
-    mov [bp], dl                               ;Write original source square
-    test dh, bh                                ;Opponent's piece (or border)?
+    xchg dh, [di]                              ;Read and write original destination square
+    mov [bp], dh                               ;Write original source square
+    test [di], bh                              ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
     jnz vec_cont                               ;Yes, proceed to next vector
