@@ -71,9 +71,9 @@ disp_done:
     stosb                                      ;Write string terminator
     int 21h                                    ;BIOS output function
 
-    mov bx, 1828h                              ;Set player's and opponent's colors
-    mov cl, 3                                  ;Set search depth
     push dx                                    ;Save buffer address
+    mov dx, 1828h                              ;Set player's and opponent's colors
+    mov cl, 3                                  ;Set search depth
     push offset main_loop                      ;Repeat forever
     mov ax, offset move_sub                    ;Perform two moves:
     push ax                                    ;Perform computer's move
@@ -99,33 +99,30 @@ read_end:
 
 ;Perform move and find best next move
 ;Input:
-;  BL - Player's color + border
-;  BH - Opponent's color + border
+;  DL - Player's color + border
+;  DH - Opponent's color + border
 ;  CX - Search depth
 ;  BP - Source square address
 ;  DI - Destination square address
 ;Output:
 ;  AL - Player's max value
 ;  AH - Opponent's max value
-;  BL - Opponent's color + border
-;  BH - Player's color + border
-;  DL - Original source square contents
-;  DH - Original destination square contents
+;  BL - Original destination square contents
+;  DL - Opponent's color + border
+;  DH - Player's color + border
 ;  BP - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
     mov ax, 0C000h                             ;Clear contents + opponent's max value
     xchg al, [bp]                              ;Read and write source square
-    mov dl, al                                 ;Clone source square contents
     xchg al, [di]                              ;Read and write destination square
-    mov dh, al                                 ;Clone destination square contents
-    xchg bl, bh                                ;Swap player's and opponent's colors
+    push ax                                    ;Save destination square contents
+    xchg dl, dh                                ;Swap player's and opponent's colors
     
-    push bx                                    ;Save player's and opponent's colors
     and al, 07h                                ;Isolate piece type
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get player's gain
-    pop bx                                     ;Restore player's and opponent's colors
+    pop bx                                     ;Restore destination square contents
     jcxz move_cont                             ;If depth is zero, return
 
 next:
@@ -135,13 +132,13 @@ next:
 
 src_loop:
     mov al, [bp]                               ;Read source square
-    test al, bl                                ;Opponent's piece or border?
+    test al, dl                                ;Opponent's piece or border?
     jnz src_cont                               ;Yes, proceed to next source square
     
     and ax, 07h                                ;Isolate piece type
     jz src_cont                                ;No piece, proceed to next source square
     
-    mov dl, al                                 ;Save piece type
+    mov bl, al                                 ;Save piece type
     mov si, offset moves_pawn - 2              ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
     lodsb                                      ;Read relative vectors address
@@ -157,10 +154,10 @@ dest_loop:
     cbw                                        ;Extend vector's sign
     add di, ax                                 ;Calculate destination square address
     mov ah, [di]                               ;Read destination square
-    test ah, bh                                ;Player's piece or border?
+    test ah, dh                                ;Player's piece or border?
     jnz vec_cont                               ;Yes, proceed to next vector
     
-    cmp dl, 03h                                ;Black or white pawn?
+    cmp bl, 03h                                ;Black or white pawn?
     jge eval                                   ;No, proceed to evaluate move
 
 pawn:
@@ -171,13 +168,13 @@ pawn_inv:
     xor ah, 30h                                ;Invert destination's color
 
 pawn_cont:
-    test ah, bl                                ;Opponent's piece (or border)?
+    test ah, dl                                ;Opponent's piece (or border)?
     jz vec_loop                                ;No, move to next vector
 
     push ax                                    ;Save vector
     and al, 80h                                ;Isolate sign bit
     shr al, 2                                  ;Align with black bit
-    xor al, bh                                 ;Flip color and border bits
+    xor al, dh                                 ;Flip color and border bits
     pop ax                                     ;Restore vector
     jnp vec_cont                               ;Odd, proceed to next vector
 
@@ -202,14 +199,14 @@ best:
     mov [si + 24], bp                          ;Write source square address
 
 undo:
-    mov [di], dh                               ;Write original destination square
-    mov [bp], dl                               ;Write original source square
-    test dh, bh                                ;Opponent's piece (or border)?
+    xchg bl, [di]                              ;Read and write original destination square
+    mov [bp], bl                               ;Write original source square
+    test [di], dh                              ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
     jnz vec_cont                               ;Yes, proceed to next vector
     
-    test dl, dl                                ;Check piece type
+    test bl, bl                                ;Check piece type
     jp dest_loop                               ;Slider, move to next destination
 
 vec_cont:
