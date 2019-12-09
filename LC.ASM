@@ -121,11 +121,11 @@ play_sub:
 ;  BP - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
-    mov dl, [bp]                               ;Read source square
-    mov al, [di]                               ;Read destination square
+    xor ax, ax                                 ;Clear contents
+    xchg al, [bp]                              ;Read and write source square
+    mov dl, al                                 ;Clone source square contents
+    xchg al, [di]                              ;Read and write destination square
     mov dh, al                                 ;Clone destination square contents
-    sub [bp], dl                               ;Clear source square
-    mov [di], dl                               ;Write destination square
     xchg bl, bh                                ;Swap player's and opponent's colors
     
     push bx                                    ;Save player's and opponent's colors
