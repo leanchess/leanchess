@@ -159,16 +159,16 @@ src_loop:
     jnz src_cont                               ;Yes, proceed to next source square
     
     and ax, 07h                                ;Isolate piece type
+    jz src_cont                                ;No piece, proceed to next source square
+    
     mov dl, al                                 ;Save piece type
-    mov si, offset moves_db                    ;Set base metadata address
+    mov si, offset moves_wpawn - 1             ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
     lodsb                                      ;Read relative vectors address
     add si, ax                                 ;Calculate absolute vectors address
 
 vec_loop:
     lodsb                                      ;Read vector
-    or al, al                                  ;Zero vector?
-    jz src_cont                                ;Yes, proceed to next source square
 
 sign_loop:
     mov di, bp                                 ;Clone source square address
@@ -227,12 +227,15 @@ undo:
 
 vec_cont:
     cmp dl, 03h                                ;Black or white pawn?
-    jl vec_loop                                ;Yes, move to next vector
+    jl vec_zero                                ;Yes, proceed to zero vector check
 
     neg al                                     ;Invert vector
     js sign_loop                               ;Negative, proceed to reset destination address
-    jmp vec_loop                               ;Positive, move to next vector
-    
+
+vec_zero:
+    or al, al                                  ;Non-zero vector?
+    jnz vec_loop                               ;Yes, move to next vector
+
 src_cont:
     dec bp                                     ;Decrement source square address
     loop src_loop                              ;Move to next source
@@ -245,7 +248,6 @@ move_cont:
 play_end:
 
 moves_db:
-    moves_null   db vec_null   - moves_null   - 1
     moves_wpawn  db vec_wpawn  - moves_wpawn  - 1
     moves_bpawn  db vec_bpawn  - moves_bpawn  - 1
     moves_bishop db vec_bishop - moves_bishop - 1
@@ -262,7 +264,6 @@ moves_db:
     vec_rook     db  10,   1
 
 eval_db: ;Fall through 1 byte
-vec_null:
     db 0, 1, 1, 3, 3, 5, 9
 
 disp_db: ;Fall through 1 byte
