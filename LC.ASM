@@ -162,7 +162,7 @@ src_loop:
     jz src_cont                                ;No piece, proceed to next source square
     
     mov dl, al                                 ;Save piece type
-    mov si, offset moves_wpawn - 1             ;Set base metadata address
+    mov si, offset moves_pawn - 2              ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
     lodsb                                      ;Read relative vectors address
     add si, ax                                 ;Calculate absolute vectors address
@@ -193,6 +193,13 @@ pawn_inv:
 pawn_cont:
     test ah, bl                                ;Opponent's piece (or border)?
     jz vec_loop                                ;No, move to next vector
+
+    push ax                                    ;Save vector
+    and al, 80h                                ;Isolate sign bit
+    shr al, 2                                  ;Align with black bit
+    xor al, bh                                 ;Flip color and border bits
+    pop ax                                     ;Restore vector
+    jnp vec_cont                               ;Odd, proceed to next vector
 
 eval:
     pusha                                      ;Save all GP registers
@@ -226,14 +233,8 @@ undo:
     jp dest_loop                               ;Slider, move to next destination
 
 vec_cont:
-    cmp dl, 03h                                ;Black or white pawn?
-    jl vec_zero                                ;Yes, proceed to zero vector check
-
     neg al                                     ;Invert vector
     js sign_loop                               ;Negative, proceed to reset destination address
-
-vec_zero:
-    or al, al                                  ;Non-zero vector?
     jnz vec_loop                               ;Yes, move to next vector
 
 src_cont:
@@ -248,30 +249,28 @@ move_cont:
 play_end:
 
 moves_db:
-    moves_wpawn  db vec_wpawn  - moves_wpawn  - 1
-    moves_bpawn  db vec_bpawn  - moves_bpawn  - 1
+    moves_pawn   db vec_pawn   - moves_pawn   - 1
     moves_bishop db vec_bishop - moves_bishop - 1
     moves_knight db vec_knight - moves_knight - 1
     moves_rook   db vec_rook   - moves_rook   - 1
     moves_queen  db vec_king   - moves_queen  - 1
     moves_king   db vec_king   - moves_king   - 1
 
-    vec_wpawn    db -10, -11,  -9,   0
     vec_knight   db  19,  21,   8,  12,   0
-    vec_bpawn    db  10
+    vec_pawn     db  10
     vec_bishop   db   9,  11,   0
     vec_king     db   9,  11
     vec_rook     db  10,   1
 
 eval_db: ;Fall through 1 byte
-    db 0, 1, 1, 3, 3, 5, 9
+    db 0, ?, 1, 3, 3, 5, 9
 
 disp_db: ;Fall through 1 byte
-    db ".PpBNRQK"
+    db 46, "?PBNRQK"
     
 init_db:
     db 08h, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
-    db 22h, 00h, 00h, 00h, 00h, 11h
+    db 22h, 00h, 00h, 00h, 00h, 12h
     db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
 
 board_db: ;Fall through 3 bytes
