@@ -73,9 +73,9 @@ disp_done:
     int 21h                                    ;BIOS output function
 
 play:
-    mov bx, 1828h                              ;Set player's and opponent's colors
-    mov cl, 3                                  ;Set search depth
     push dx                                    ;Save buffer address
+    mov dx, 1828h                              ;Set player's and opponent's colors
+    mov cl, 3                                  ;Set search depth
     push offset main_loop                      ;Repeat forever
     push offset auto_move_sub                  ;Perform computer's move
     push offset move_sub                       ;Perform human's move
@@ -119,20 +119,20 @@ gain_end:
 ;Evaluate move
 ;Input:
 ;  AH - Promoted piece type
-;  BL - Player's color + border
-;  BH - Opponent's color + border
+;  BL - Source piece type
+;  BH - Source square contents + moved
 ;  CX - Destination counter
-;  DL - Source piece type
-;  DH - Source square contents + moved
+;  DL - Player's color + border
+;  DH - Opponent's color + border
 ;  BP - Source square address
 ;  DI - Destination square address
 ;Output:
 ;  AH - Promoted piece type
-;  BL - Player's color + border
-;  BH - Opponent's color + border
+;  BL - Source piece type
+;  BH - Source square contents + moved
 ;  CX - Destination counter
-;  DL - Source piece type
-;  DH - Source square contents + moved
+;  DL - Player's color + border
+;  DH - Opponent's color + border
 ;  BP - Source square address
 ;  DI - Destination square address
 ;  ZF = 0 if OK to move to next destination
@@ -146,10 +146,10 @@ eval_sub:
     dec cx                                     ;Decrement depth
     call move_sub                              ;Perform move and find next best move
     mov ah, [si + 39]                          ;Read player's max value
-    cmp al, ah                                 ;Current value exceeds max value?
+    cmp al, ah                                 ;Max value exceeds current value?
     pop di                                     ;Restore destination square address
     pop bp                                     ;Restore source square address
-    jl undo                                    ;No, proceed to undo move
+    jl undo                                    ;Yes, proceed to undo move
 
 best:
     mov [si + 39], al                          ;Write max value
@@ -157,8 +157,8 @@ best:
     mov [si + 28], bp                          ;Write source square address
 
 undo:
-    mov [di], dh                               ;Write original destination square
-    mov [bp], dl                               ;Write original source square
+    mov [di], bh                               ;Write original destination square
+    mov [bp], bl                               ;Write original source square
 
     cmp dl, 03h                                ;King?
     jne undo_cont                              ;No, proceed to check destination square
@@ -185,15 +185,15 @@ undo_king_cont:
     popa                                       ;Restore king's move parameters
 
 undo_cont:
-    test dh, bh                                ;Opponent's piece (or border)?
+    test bh, dh                                ;Opponent's piece (or border)?
     popa                                       ;Restore all GP registers
     ret
 eval_end:
 
 move_cast_undo:
     popa                                       ;Restore king's move parameters
-    mov [di], dh                               ;Write original destination square
-    mov [bp], dl                               ;Write original source square
+    mov [di], bh                               ;Write original destination square
+    mov [bp], bl                               ;Write original source square
     ret
 
 auto_move_sub:
@@ -202,32 +202,32 @@ auto_move_sub:
 ;Perform move and find best next move
 ;Input:
 ;  AH - Promoted piece type
-;  BL - Player's color + border
-;  BH - Opponent's color + border
+;  DL - Player's color + border
+;  DH - Opponent's color + border
 ;  CX - Search depth
 ;  BP - Source square address
 ;  DI - Destination square address
 ;Output:
 ;  AL - Player's max value
 ;  AH - Opponent's max value
-;  BL - Opponent's color + border
-;  BH - Player's color + border
-;  DL - Original source square contents
-;  DH - Original destination square contents
+;  BL - Original source square contents
+;  BH - Original destination square contents
+;  DL - Opponent's color + border
+;  DH - Player's color + border
 ;  BP - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
-    mov dl, [bp]                               ;Read source square
-    mov dh, [di]                               ;Read destination square
+    mov bl, [bp]                               ;Read source square
+    mov bh, [di]                               ;Read destination square
     and byte ptr [bp], 80h                     ;Clear source square
-    mov al, dl                                 ;Clone source square contents
+    mov al, bl                                 ;Clone source square contents
     and al, 07h                                ;Isolate piece type
     cmp al, 03h                                ;King or pawn?
     je move_king                               ;King, proceed to special move checks
     jg move_dest                               ;Other, proceed to write destination square
 
 move_pawn:
-    test dh, 80h                               ;Promotion destination?
+    test bh, 80h                               ;Promotion destination?
     jz move_dest                               ;No, proceed to write destination square
 
 move_promo:
@@ -270,27 +270,27 @@ move_cast_cont:
 
 move_king_cont:
     popa                                       ;Restore king's move parameters
-    
+
 move_dest:
-    or al, bh                                  ;Set color
-    mov ah, dh                                 ;Clone destination contents
+    or al, dh                                  ;Set color
+    mov ah, bh                                 ;Clone destination contents
     and ax, 8037h                              ;Isolate piece type, color and promotion flag
     or al, 40h                                 ;Set moved flag
     or al, ah                                  ;Update promotion flag
     mov [di], al                               ;Write destination square
 
-    mov al, dh                                 ;Clone destination square contents
+    mov al, bh                                 ;Clone destination square contents
     call gain_sub                              ;Calculate capture gain
     mov al, ch                                 ;Save total gain
 
-    xchg bl, bh                                ;Swap player's and opponent's colors
+    xchg dl, dh                                ;Swap player's and opponent's colors
     xor ch, ch                                 ;Clear depth's upper byte
     jcxz move_cont                             ;If depth is zero, return
     cmp al, 46                                 ;King captured?
     jge move_cont                              ;If yes, return
 
 next:
-    mov ah, -64                                ;Initialize opponent's max value
+    xor ah, ah                                 ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
     mov bp, offset board_db + 30h              ;Start from top left corner
     mov cl, 78h                                ;Ranks * width - margin width
@@ -298,14 +298,14 @@ next:
 src_loop:
     push cx                                    ;Save source counter
     mov al, [bp]                               ;Read source square
-    test al, bl                                ;Opponent's piece or border?
+    test al, dl                                ;Opponent's piece or border?
     jnz src_cont                               ;Yes, proceed to next source square
     
-    mov dh, al                                 ;Save source square
+    mov bh, al                                 ;Save source square
     and ax, 07h                                ;Isolate piece type
     jz src_cont                                ;No piece, proceed to next source square
     
-    mov dl, al                                 ;Save piece type
+    mov bl, al                                 ;Save piece type
     mov si, offset moves_wpawn - 1             ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
     lodsb                                      ;Read relative vectors address
@@ -315,7 +315,7 @@ vec_loop:
     lodsb                                      ;Read vector
 
     xor cx, cx                                 ;Reset range
-    cmp dl, 04h                                ;Check piece type
+    cmp bl, 04h                                ;Check piece type
     jg sign_loop                               ;Slider, proceed to reset destination address
     inc cx                                     ;Crawler, limit range
 
@@ -326,10 +326,10 @@ dest_loop:
     cbw                                        ;Extend vector's sign
     add di, ax                                 ;Calculate destination square address
     mov ah, [di]                               ;Read destination square
-    test ah, bh                                ;Player's piece or border?
+    test ah, dh                                ;Player's piece or border?
     jnz vec_cont                               ;Yes, proceed to next vector
     
-    cmp dl, 03h                                ;Black or white pawn?
+    cmp bl, 03h                                ;Black or white pawn?
     jge eval                                   ;No, proceed to evaluate move
 
 pawn:
@@ -337,16 +337,16 @@ pawn:
     jnz pawn_cont                              ;Yes, proceed to check destination square
 
 pawn_vert:
-    test dh, 40h                               ;Source piece moved?
+    test bh, 40h                               ;Source piece moved?
     jnz pawn_inv                               ;Yes, proceed to invert color
-    or dh, 40h                                 ;Mark as moved
+    or bh, 40h                                 ;Mark as moved
     inc cx                                     ;Increment range
 
 pawn_inv:
     xor ah, 30h                                ;Invert destination's color
 
 pawn_cont:
-    test ah, bl                                ;Opponent's piece (or border)?
+    test ah, dl                                ;Opponent's piece (or border)?
     jz vec_loop                                ;No, move to next vector
 
 eval_knight:
@@ -359,7 +359,7 @@ eval:
     loopz dest_loop                            ;No, move to next destination
 
 vec_cont:
-    cmp dl, 03h                                ;Black or white pawn?
+    cmp bl, 03h                                ;Black or white pawn?
     jl vec_zero                                ;Yes, proceed to zero vector check
 
     neg al                                     ;Invert vector
