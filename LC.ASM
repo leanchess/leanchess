@@ -262,6 +262,9 @@ init_db: ;Fall through 1 byte
     db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
 
 board_db: ;Fall through 3 bytes
+    db 130 dup(?)
+
+buffer_db:
 
 code ends
 end start
