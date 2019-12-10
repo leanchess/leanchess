@@ -40,13 +40,12 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 init_done:
-    push di                                    ;Save buffer address
+    mov bp, di                                 ;Save buffer address
 
 main_loop:
     mov cl, 60h                                ;Ranks * width + margin width + safety
     mov si, offset board_db + 12               ;Grab preceding CR/LF
-    pop di                                     ;Restore buffer address
-    mov bp, di                                 ;Clone buffer address
+    mov di, bp                                 ;Restore buffer address
     push cx                                    ;Save output length
 
 disp_loop:
@@ -74,7 +73,6 @@ disp_done:
     int 10h                                    ;BIOS output function
 
 play:
-    push bp                                    ;Save buffer address
     mov dx, 1828h                              ;Set player's and opponent's colors
     mov cl, 3                                  ;Set search depth
     push offset main_loop                      ;Repeat forever
@@ -82,12 +80,13 @@ play:
     push ax                                    ;Perform computer's move
     push ax                                    ;Perform human's move
     push offset read_square_sub                ;Read destination square
+main_end:
 
 ;Read square from input
 ;Output:
 ;  DI - Square address
 read_square_sub:
-    mov bp, di                                 ;Clone address
+    mov si, di                                 ;Clone address
     mov di, offset board_db + 101              ;Bottom right corner + margin
     mov bl, 1                                  ;Set file factor
     call read_coord_sub                        ;Read character and add to address
@@ -113,7 +112,7 @@ read_end:
 ;  DL - Player's color + border
 ;  DH - Opponent's color + border
 ;  CX - Search depth
-;  BP - Source square address
+;  SI - Source square address
 ;  DI - Destination square address
 ;Output:
 ;  AL - Player's max value
@@ -121,11 +120,11 @@ read_end:
 ;  BL - Original destination square contents
 ;  DL - Opponent's color + border
 ;  DH - Player's color + border
-;  BP - Opponent's best source square address
+;  SI - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
     xor ax, ax                                 ;Clear contents + opponent's max value
-    xchg al, [bp]                              ;Read and write source square
+    xchg al, [si]                              ;Read and write source square
     xchg al, [di]                              ;Read and write destination square
     push ax                                    ;Save destination square contents
     xchg dl, dh                                ;Swap player's and opponent's colors
@@ -194,24 +193,25 @@ eval:
     push bp                                    ;Save source square address
     push di                                    ;Save destination square address
     
-    mov si, sp                                 ;Clone stack pointer
-    mov cx, [si + 32]                          ;Read current depth
+    mov si, bp                                 ;Clone source square address
+    mov bp, sp                                 ;Clone stack pointer
+    mov cx, [bp + 32]                          ;Read current depth
     dec cx                                     ;Decrement depth
     call move_sub                              ;Recursively call self
-    mov ah, [si + 35]                          ;Read player's max value
+    mov ah, [bp + 35]                          ;Read player's max value
     cmp al, ah                                 ;Max value exceeds current value?
     pop di                                     ;Restore destination square address
-    pop bp                                     ;Restore source square address
+    pop si                                     ;Restore source square address
     jl undo                                    ;Yes, proceed to undo move
 
 best:
-    mov [si + 35], al                          ;Write max value
-    mov [si + 20], di                          ;Write destination square address
-    mov [si + 24], bp                          ;Write source square address
+    mov [bp + 35], al                          ;Write max value
+    mov [bp + 20], di                          ;Write destination square address
+    mov [bp + 22], si                          ;Write source square address
 
 undo:
     xchg bl, [di]                              ;Read and write original destination square
-    mov [bp], bl                               ;Write original source square
+    mov [si], bl                               ;Write original source square
     test [di], dh                              ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
