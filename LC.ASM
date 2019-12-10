@@ -40,13 +40,12 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 init_done:
-    push di                                    ;Save buffer address
+    mov bp, di                                 ;Save buffer address
 
 main_loop:
     mov cl, 60h                                ;Ranks * width + margin width + safety
     mov si, offset board_db + 12               ;Grab preceding CR/LF
-    pop di                                     ;Restore buffer address
-    mov bp, di                                 ;Clone buffer address
+    mov di, bp                                 ;Restore buffer address
     push cx                                    ;Save output length
 
 disp_loop:
@@ -71,7 +70,6 @@ disp_done:
     int 10h                                    ;BIOS output function
 
 play:
-    push bp                                    ;Save buffer address
     mov dx, 1828h                              ;Set player's and opponent's colors
     mov cl, 3                                  ;Set search depth
     push offset main_loop                      ;Repeat forever
