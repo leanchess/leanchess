@@ -157,9 +157,7 @@ best:
     mov [si + 28], bp                          ;Write source square address
 
 undo:
-    mov [di], bh                               ;Write original destination square
-    mov [bp], bl                               ;Write original source square
-
+    call undo_sub
     cmp dl, 03h                                ;King?
     jne undo_cont                              ;No, proceed to check destination square
 
@@ -190,8 +188,10 @@ undo_cont:
     ret
 eval_end:
 
-move_cast_undo:
+move_undo_sub:
     popa                                       ;Restore king's move parameters
+
+undo_sub:
     mov [di], bh                               ;Write original destination square
     mov [bp], bl                               ;Write original source square
     ret
@@ -260,7 +260,7 @@ move_cast_cont:
     and ax, 774Fh                              ;Filter out colors + promo and border + promo
     cmp ax, 0006h                              ;Unmoved rook and vacant square?
     pop ax                                     ;Restore king's vector
-    jne move_cast_undo                         ;No, proceed to undo king's move
+    jne move_undo_sub                          ;No, proceed to undo king's move
 
     sar ax, 1                                  ;Normalize king's vector
     add bp, ax                                 ;Calculate rook's destination address
