@@ -80,12 +80,13 @@ play:
     push offset auto_move_sub                  ;Perform computer's move
     push offset move_sub                       ;Perform human's move
     push offset read_sub                       ;Read destination square
+main_end:
 
 ;Read square from input
 ;Output:
 ;  DI - Square address
 read_sub:
-    mov bp, di                                 ;Clone address
+    mov si, di                                 ;Clone address
     mov di, offset board_db + 0AEh - 15Fh      ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
@@ -140,21 +141,22 @@ eval_sub:
     pusha                                      ;Save all GP registers
     push bp                                    ;Save source square address
     push di                                    ;Save destination square address
-    
-    mov si, sp                                 ;Clone stack pointer
-    mov cx, [si + 36]                          ;Read current depth
+
+    mov si, bp
+    mov bp, sp                                 ;Clone stack pointer
+    mov cx, [bp + 36]                          ;Read current depth
     dec cx                                     ;Decrement depth
     call move_sub                              ;Perform move and find next best move
-    mov ah, [si + 39]                          ;Read player's max value
+    mov ah, [bp + 39]                          ;Read player's max value
     cmp al, ah                                 ;Max value exceeds current value?
     pop di                                     ;Restore destination square address
-    pop bp                                     ;Restore source square address
+    pop si                                     ;Restore source square address
     jl undo                                    ;Yes, proceed to undo move
 
 best:
-    mov [si + 39], al                          ;Write max value
-    mov [si + 24], di                          ;Write destination square address
-    mov [si + 28], bp                          ;Write source square address
+    mov [bp + 39], al                          ;Write max value
+    mov [bp + 24], di                          ;Write destination square address
+    mov [bp + 26], si                          ;Write source square address
 
 undo:
     call undo_sub
@@ -164,7 +166,7 @@ undo:
 undo_king:
     pusha                                      ;Save king's move parameters
     mov ax, di                                 ;Clone destination square address
-    sub ax, bp                                 ;Calculate king's vector
+    sub ax, si                                 ;Calculate king's vector
     cmp al, 0FEh                               ;Queenside castling?
     je undo_cast_cont                          ;Yes, proceed to calculate rook's move
     cmp al, 02h                                ;Kingside castling?
@@ -174,9 +176,9 @@ undo_king:
 undo_cast_cont:
     add di, ax                                 ;Calculate rook's source address
     sar ax, 1                                  ;Normalize king's vector
-    add bp, ax                                 ;Calculate rook's destination address
-    mov al, [bp]                               ;Read rook's destination square
-    and byte ptr [bp], 80h                     ;Clear rook's destination square
+    add si, ax                                 ;Calculate rook's destination address
+    mov al, [si]                               ;Read rook's destination square
+    and byte ptr [si], 80h                     ;Clear rook's destination square
     mov [di], al                               ;Write rook's source square
 
 undo_king_cont:
@@ -193,7 +195,7 @@ move_undo_sub:
 
 undo_sub:
     mov [di], bh                               ;Write original destination square
-    mov [bp], bl                               ;Write original source square
+    mov [si], bl                               ;Write original source square
     ret
 
 auto_move_sub:
@@ -205,7 +207,7 @@ auto_move_sub:
 ;  DL - Player's color + border
 ;  DH - Opponent's color + border
 ;  CX - Search depth
-;  BP - Source square address
+;  SI - Source square address
 ;  DI - Destination square address
 ;Output:
 ;  AL - Player's max value
@@ -214,12 +216,12 @@ auto_move_sub:
 ;  BH - Original destination square contents
 ;  DL - Opponent's color + border
 ;  DH - Player's color + border
-;  BP - Opponent's best source square address
+;  SI - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
-    mov bl, [bp]                               ;Read source square
+    mov bl, [si]                               ;Read source square
     mov bh, [di]                               ;Read destination square
-    and byte ptr [bp], 80h                     ;Clear source square
+    and byte ptr [si], 80h                     ;Clear source square
     mov al, bl                                 ;Clone source square contents
     and al, 07h                                ;Isolate piece type
     cmp al, 03h                                ;King or pawn?
@@ -246,7 +248,7 @@ move_promo_cont:
 move_king:
     pusha                                      ;Save king's move parameters
     mov ax, di                                 ;Clone destination square address
-    sub ax, bp                                 ;Calculate king's vector
+    sub ax, si                                 ;Calculate king's vector
     cmp al, 0FEh                               ;Queenside castling?
     je move_cast_cont                          ;Yes, proceed to calculate rook's move
     cmp al, 02h                                ;Kingside castling?
@@ -263,10 +265,10 @@ move_cast_cont:
     jne move_undo_sub                          ;No, proceed to undo king's move
 
     sar ax, 1                                  ;Normalize king's vector
-    add bp, ax                                 ;Calculate rook's destination address
+    add si, ax                                 ;Calculate rook's destination address
     mov al, [di]                               ;Read rook's source square
     and byte ptr [di], 80h                     ;Clear rook's source square
-    mov [bp], al                               ;Write rook's destination square
+    mov [si], al                               ;Write rook's destination square
 
 move_king_cont:
     popa                                       ;Restore king's move parameters
