@@ -124,7 +124,7 @@ read_end:
 ;  BP - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
-    mov ax, 0C000h                             ;Clear contents + opponent's max value
+    xor ax, ax                                 ;Clear contents + opponent's max value
     xchg al, [bp]                              ;Read and write source square
     xchg al, [di]                              ;Read and write destination square
     push ax                                    ;Save destination square contents
@@ -138,7 +138,7 @@ move_sub:
 
 next:
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 99               ;Start from bottom right corner
+    mov bp, offset board_db + 22               ;Start from top left corner
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
@@ -199,10 +199,10 @@ eval:
     dec cx                                     ;Decrement depth
     call move_sub                              ;Recursively call self
     mov ah, [si + 35]                          ;Read player's max value
-    cmp al, ah                                 ;Current value exceeds max value?
+    cmp al, ah                                 ;Max value exceeds current value?
     pop di                                     ;Restore destination square address
     pop bp                                     ;Restore source square address
-    jle undo                                   ;No, proceed to undo move
+    jl undo                                    ;Yes, proceed to undo move
 
 best:
     mov [si + 35], al                          ;Write max value
@@ -226,7 +226,7 @@ vec_cont:
     jnz vec_loop                               ;Yes, move to next vector
 
 src_cont:
-    dec bp                                     ;Decrement source square address
+    inc bp                                     ;Increment source square address
     loop src_loop                              ;Move to next source
     
 move_done:
