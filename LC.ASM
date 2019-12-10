@@ -39,13 +39,10 @@ init_cont:
     pop cx                                     ;Restore row counter
     loop init_loop                             ;Move to next row
 
-init_done:
-    push di                                    ;Save buffer address
-
 main_loop:
     mov cl, 92                                 ;(Ranks + 1) * width + margin width + CRLF
     mov si, offset board_db + 10               ;Grab preceding CR/LF
-    pop di                                     ;Restore buffer address
+    mov di, offset buffer_db                   ;Set buffer address
     mov dx, di                                 ;Clone buffer address
 
 disp_loop:
@@ -72,7 +69,6 @@ disp_done:
     int 21h                                    ;BIOS output function
 
 play:
-    push dx                                    ;Save buffer address
     mov dx, 1828h                              ;Set player's and opponent's colors
     mov cl, 3                                  ;Set search depth
     push offset main_loop                      ;Repeat forever
@@ -254,6 +250,9 @@ init_db: ;Fall through 1 byte
     db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
 
 board_db: ;Fall through 3 bytes
+    db 130 dup(?)
+
+buffer_db:
 
 code ends
 end start
