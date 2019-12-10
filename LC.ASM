@@ -76,12 +76,13 @@ play:
     push ax                                    ;Perform computer's move
     push ax                                    ;Perform human's move
     push offset read_sub                       ;Read destination square
+main_end:
 
 ;Read square from input
 ;Output:
 ;  DI - Square address
 read_sub:
-    mov bp, di                                 ;Clone address
+    mov si, di                                 ;Clone address
     mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
@@ -101,7 +102,7 @@ read_end:
 ;  DL - Player's color + border
 ;  DH - Opponent's color + border
 ;  CX - Search depth
-;  BP - Source square address
+;  SI - Source square address
 ;  DI - Destination square address
 ;Output:
 ;  AL - Player's max value
@@ -109,11 +110,11 @@ read_end:
 ;  BL - Original destination square contents
 ;  DL - Opponent's color + border
 ;  DH - Player's color + border
-;  BP - Opponent's best source square address
+;  SI - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
     xor ax, ax                                 ;Clear contents + opponent's max value
-    xchg al, [bp]                              ;Read and write source square
+    xchg al, [si]                              ;Read and write source square
     xchg al, [di]                              ;Read and write destination square
     push ax                                    ;Save destination square contents
     xchg dl, dh                                ;Swap player's and opponent's colors
@@ -182,24 +183,25 @@ eval:
     push bp                                    ;Save source square address
     push di                                    ;Save destination square address
     
-    mov si, sp                                 ;Clone stack pointer
-    mov cx, [si + 32]                          ;Read current depth
+    mov si, bp                                 ;Clone source square address
+    mov bp, sp                                 ;Clone stack pointer
+    mov cx, [bp + 32]                          ;Read current depth
     dec cx                                     ;Decrement depth
     call move_sub                              ;Recursively call self
-    mov ah, [si + 35]                          ;Read player's max value
+    mov ah, [bp + 35]                          ;Read player's max value
     cmp al, ah                                 ;Max value exceeds current value?
     pop di                                     ;Restore destination square address
-    pop bp                                     ;Restore source square address
+    pop si                                     ;Restore source square address
     jl undo                                    ;Yes, proceed to undo move
 
 best:
-    mov [si + 35], al                          ;Write max value
-    mov [si + 20], di                          ;Write destination square address
-    mov [si + 24], bp                          ;Write source square address
+    mov [bp + 35], al                          ;Write max value
+    mov [bp + 20], di                          ;Write destination square address
+    mov [bp + 22], si                          ;Write source square address
 
 undo:
     xchg bl, [di]                              ;Read and write original destination square
-    mov [bp], bl                               ;Write original source square
+    mov [si], bl                               ;Write original source square
     test [di], dh                              ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
