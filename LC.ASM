@@ -25,7 +25,8 @@ start:
 
 init_loop:
     push cx                                    ;Save row counter
-    mov ax, 0A0Dh                              ;AL=CR, AH=LF
+    mov ax, 0808h                              ;Border
+    stosw                                      ;Write two bytes
     stosw                                      ;Write two bytes
     mov cl, 8                                  ;Set square counter
     lodsb                                      ;Read one byte
@@ -41,24 +42,18 @@ init_cont:
 
 main_loop:
     push dx                                    ;Save player's and opponent's colors
-    mov cl, 82                                 ;Ranks * width + margin width + CRLF
-    mov si, offset board_db + 20               ;Grab preceding CR/LF
+    mov cl, 96                                 ;Ranks * width
+    mov si, offset board_db + 26               ;Grab two preceding tabs
     mov di, offset buffer_db                   ;Set buffer address
     mov dx, di                                 ;Clone buffer address
 
 disp_loop:
     lodsb                                      ;Read square contents
-    test al, 08h                               ;Border?
-    jnz disp_cont                              ;Yes, proceed to write square
-
-disp_piece:
     mov ah, al                                 ;Clone square contents
-    and ax, 2007h                              ;Isolate piece type and case
+    and ax, 200Fh                              ;Isolate piece type/border and case
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
     or al, ah                                  ;Apply case
-
-disp_cont:
     stosb                                      ;Write square
     loop disp_loop                             ;Move to next square
     
@@ -85,12 +80,12 @@ read_sub:
 
 read_cont:
     mov si, di                                 ;Clone address
-    mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
+    mov di, offset board_db + 123 - 160h       ;Bottom right corner + margin - ASCII offset
     add di, ax                                 ;Add result to base address
     int 21h                                    ;DOS I/O function
     and al, 0Fh                                ;Isolate number (expected 1-8)
-    xchg ah, al                                ;Flip BCD digits
-    aad                                        ;Multiply AH by 10 and add AL
+    mov ah, 12                                 ;
+    mul ah                                     ;Multiply by 12
     sub di, ax                                 ;Subtract result from base address
 
 sub_ret:
@@ -147,7 +142,7 @@ move_cont:
 next_sub:
     xor ah, ah                                 ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 22               ;Start from top left corner
+    mov bp, offset board_db + 28               ;Start from top left corner
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
@@ -189,7 +184,7 @@ pawn_inv:
 
 pawn_cont:
     test ah, dl                                ;Opponent's piece (or border)?
-    jz vec_cont                                ;No, proceed to next vector
+    jz vec_loop                                ;No, move to next vector
 
     push ax                                    ;Save vector
     and al, 80h                                ;Isolate sign bit
@@ -252,25 +247,25 @@ moves_db:
     moves_queen  db vec_king   - moves_queen  - 1
     moves_rook   db vec_rook   - moves_rook   - 1
 
-    vec_knight   db   8,  12,  19,  21,   0 ;Fall through 1 byte
-    vec_pawn     db  10
-    vec_bishop   db   9,  11,   0
-    vec_king     db   9,  11
-    vec_rook     db  10,   1
+    vec_knight   db  10,  14,  23,  25,   0 ;Fall through 1 byte
+    vec_pawn     db  12
+    vec_bishop   db  11,  13,   0
+    vec_king     db  11,  13
+    vec_rook     db  12,   1
 
 eval_db: ;Fall through 1 byte
     db 0, 0, 3, 3, 1, 9, 5
 
 disp_db: ;Fall through 1 byte
-    db 46, "?NBPQR"
+    db 46, "?NBPQRK", 09h
 
-init_db: ;Fall through 1 byte
-    db 'K', 08h, 0A6h, 0A2h, 0A3h, 0A5h, 0A7h, 0A3h, 0A2h, 0A6h
+init_db:
+    db 08h, 08h, 0A6h, 0A2h, 0A3h, 0A5h, 0A7h, 0A3h, 0A2h, 0A6h
     db 24h, 00h, 00h, 00h, 00h, 14h
     db 96h, 92h, 93h, 95h, 97h, 93h, 92h, 96h
 
 board_db: ;Fall through 3 bytes
-    db 130 dup(?)
+    db 156 dup(?)
 
 buffer_db:
 
