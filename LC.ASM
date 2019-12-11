@@ -51,10 +51,6 @@ main_loop:
 
 disp_loop:
     lodsb                                      ;Read square contents
-    test al, 08h                               ;Border?
-    jz disp_piece                              ;No, proceed to write piece
-
-disp_piece:
     mov ah, al                                 ;Clone square contents
     and ax, 200Fh                              ;Isolate piece type/border and case
     mov bx, offset disp_db                     ;Set base chars' address
