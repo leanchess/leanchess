@@ -50,17 +50,17 @@ main_loop:
 disp_loop:
     lodsb                                      ;Read square contents
     test al, 08h                               ;Border?
-    jz disp_cont                               ;No, proceed to write square
+    jz disp_piece                              ;No, proceed to write square
     add si, 7                                  ;Skip border squares
 
-disp_cont:
-    push ax                                    ;Save square contents
-    and al, 0Fh                                ;Isolate piece type/border
+disp_piece:
+    mov ah, al                                 ;Clone square contents
+    and ax, 200Fh                              ;Isolate piece type/border and case
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
-    pop bx                                     ;Restore square contents
-    and bl, 20h                                ;Isolate black/lowercase
-    or al, bl                                  ;Apply case
+    or al, ah                                  ;Apply case
+
+disp_cont:
     stosb                                      ;Write square
     loop disp_loop                             ;Move to next square
     
