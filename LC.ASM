@@ -54,12 +54,11 @@ disp_loop:
     jnz disp_cont                              ;Yes, proceed to write square
 
 disp_piece:
-    mov dx, ax                                 ;Clone square contents
-    and al, 07h                                ;Isolate piece type
+    mov ah, al                                 ;Clone square contents
+    and ax, 2007h                              ;Isolate piece type and case
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
-    and dx, 0020h                              ;Isolate black/lowercase/first display row
-    or al, dl                                  ;Apply case
+    or al, ah                                  ;Apply case
     
 disp_cont:
     stosb                                      ;Write square
