@@ -50,11 +50,10 @@ disp_loop:
     lodsb                                      ;Read square contents
     test al, 08h                               ;Border?
     jz disp_piece                              ;No, proceed to write piece
-    inc al                                     ;Increment square contents
 
 disp_piece:
     mov ah, al                                 ;Clone square contents
-    and ax, 2007h                              ;Isolate piece type and case
+    and ax, 200Fh                              ;Isolate piece type/border and case
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
     or al, ah                                  ;Apply case
@@ -240,7 +239,7 @@ eval_db: ;Fall through 1 byte
     db 0, ?, 1, 3, 3, 5, 9
 
 disp_db: ;Fall through 1 byte
-    db 46, 09h, "PBNRQK"
+    db 46, "?PBNRQK", 09h
     
 init_db:
     db 08, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
