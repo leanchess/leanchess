@@ -343,7 +343,7 @@ pawn_inv:
 
 pawn_cont:
     test ah, dl                                ;Opponent's piece (or border)?
-    jz vec_loop                                ;No, move to next vector
+    jz vec_cont                                ;No, proceed to next vector
 
 eval_knight:
     mov ah, 04h                                ;Promote to knight
