@@ -40,8 +40,9 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
-    mov cl, 92                                 ;(Ranks + 1) * width + margin width + CRLF
-    mov si, offset board_db + 10               ;Grab preceding CR/LF
+    push dx                                    ;Save player's and opponent's colors
+    mov cl, 82                                 ;Ranks * width + margin width + CRLF
+    mov si, offset board_db + 20               ;Grab preceding CR/LF
     mov di, offset buffer_db                   ;Set buffer address
     mov dx, di                                 ;Clone buffer address
 
@@ -66,12 +67,16 @@ disp_done:
     stosb                                      ;Write string terminator
     int 21h                                    ;DOS I/O function
 
-play:
-    mov dx, 1828h                              ;Set player's and opponent's colors
+play_loop:
     call read_sub                              ;Read source square
+    jz play_cont                               ;Enter pressed, proceed to search
     mov si, di                                 ;Clone address
     call read_sub                              ;Read destination square
+    mov dx, 1828h                              ;Set player's and opponent's colors
     call move_sub                              ;Perform human's move
+    jmp play_loop                              ;Repeat forever
+
+play_cont:
     mov cl, 3                                  ;Set search depth
     call next_sub                              ;Find computer's move
     xor cx, cx                                 ;Clear depth
@@ -86,6 +91,8 @@ read_sub:
     mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
+    cmp al, 0Dh                                ;Enter pressed?
+    jz sub_ret                                 ;Yes, proceed to return
     add di, ax                                 ;Add result to base address
     int 21h                                    ;DOS I/O function
     and al, 0Fh                                ;Isolate number (expected 1-8)
@@ -132,13 +139,14 @@ move_cont:
     
     pop ax                                     ;Restore destination and source square contents
     push ax                                    ;Save destination and source square contents
-    and ax, 07h                                ;Isolate piece type + opponent's max value
+    and al, 07h                                ;Isolate piece type
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get player's gain
     pop bx                                     ;Restore destination square contents
     jcxz sub_ret                               ;If depth is zero, return
 
 next_sub:
+    xor ah, ah                                 ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
     mov bp, offset board_db + 22               ;Start from top left corner
     mov cl, 78                                 ;Ranks * width - margin width
