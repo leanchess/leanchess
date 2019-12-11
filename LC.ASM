@@ -47,14 +47,16 @@ main_loop:
 
 disp_loop:
     lodsb                                      ;Read square contents
-    test al, 30h                               ;Piece?
-    jz disp_cont                               ;No, proceed to write square
+    test al, 08h                               ;Border?
+    jnz disp_cont                              ;Yes, proceed to write square
 
 disp_piece:
-    inc ax                                     ;Zero-align king
-    and al, 27h                                ;Isolate piece type and black/lowercase
-    add al, 4Bh                                ;King, (none), (reserved), kNight, bishOp, Pawn, Queen, Rook
-    
+    mov ah, al                                 ;Clone square contents
+    and ax, 2007h                              ;Isolate piece type and case
+    mov bx, offset disp_db                     ;Set base chars' address
+    xlat                                       ;Translate piece type to char
+    or al, ah                                  ;Apply case
+
 disp_cont:
     stosb                                      ;Write square
     loop disp_loop                             ;Move to next square
@@ -104,18 +106,31 @@ read_end:
 ;  AL - Player's max value
 ;  AH - Opponent's max value
 ;  BL - Original destination square contents
+;  BH - Original source square contents
 ;  DL - Opponent's color + border
 ;  DH - Player's color + border
 ;  SI - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
-    xor ax, ax                                 ;Clear contents + opponent's max value
-    xchg al, [si]                              ;Read and write source square
-    xchg al, [di]                              ;Read and write destination square
-    push ax                                    ;Save destination square contents
+    mov ah, [si]                               ;Read source square
+    mov al, [di]                               ;Read destination square
+    and byte ptr [si], 80h                     ;Clear source square
+    push ax                                    ;Save destination and source square contents
+    and ax, 0780h                              ;Isolate promotion destination and source piece type
+    cmp ax, 0480h                              ;Pawn to promote?
+    jne move_cont                              ;No, proceed
+    inc ax                                     ;Promote to queen
+
+move_cont:
+    or al, dh                                  ;Apply player's color
+    or al, ah                                  ;Apply piece type
+    and al, 0B7h                               ;Remove border
+    mov [di], al                               ;Write destination square
     xchg dl, dh                                ;Swap player's and opponent's colors
     
-    and al, 07h                                ;Isolate piece type
+    pop ax                                     ;Restore destination and source square contents
+    push ax                                    ;Save destination and source square contents
+    and ax, 07h                                ;Isolate piece type + opponent's max value
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get player's gain
     pop bx                                     ;Restore destination square contents
@@ -196,8 +211,8 @@ best:
     mov [bp + 22], si                          ;Write source square address
 
 undo:
-    xchg bl, [di]                              ;Read and write original destination square
-    mov [si], bl                               ;Write original source square
+    mov [di], bl                               ;Write original destination square
+    mov [si], bh                               ;Write original source square
     test [di], dh                              ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
@@ -235,10 +250,13 @@ moves_db:
     vec_rook     db  10,   1
 
 eval_db: ;Fall through 1 byte
-    db 0, 0, 3, 3, 1, 9, 5, 46
+    db 0, 0, 3, 3, 1, 9, 5
 
-init_db:
-    db 08h, 08h, 0A6h, 0A2h, 0A3h, 0A5h, 0A7h, 0A3h, 0A2h, 0A6h
+disp_db: ;Fall through 1 byte
+    db 46, "?NBPQR"
+
+init_db: ;Fall through 1 byte
+    db 'K', 08h, 0A6h, 0A2h, 0A3h, 0A5h, 0A7h, 0A3h, 0A2h, 0A6h
     db 24h, 00h, 00h, 00h, 00h, 14h
     db 96h, 92h, 93h, 95h, 97h, 93h, 92h, 96h
 
