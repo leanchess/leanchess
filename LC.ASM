@@ -173,7 +173,7 @@ pawn_inv:
 
 pawn_cont:
     test ah, dl                                ;Opponent's piece (or border)?
-    jz vec_loop                                ;No, move to next vector
+    jz vec_cont                                ;No, proceed to next vector
 
     push ax                                    ;Save vector
     and al, 80h                                ;Isolate sign bit
