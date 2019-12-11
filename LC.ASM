@@ -25,7 +25,8 @@ start:
 
 init_loop:
     push cx                                    ;Save row counter
-    mov ax, 0A0Dh                              ;AL=CR, AH=LF
+    mov ax, 0808h                              ;Border
+    stosw                                      ;Write two bytes
     stosw                                      ;Write two bytes
     mov cl, 8                                  ;Set square counter
     lodsb                                      ;Read one byte
@@ -40,15 +41,16 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
-    mov cl, 92                                 ;(Ranks + 1) * width + margin width + CRLF
-    mov si, offset board_db + 10               ;Grab preceding CR/LF
+    mov cl, 101                                ;Ranks * width + margin width
+    mov si, offset board_db + 21               ;Grab preceding line
     mov di, offset buffer_db                   ;Set buffer address
     mov dx, di                                 ;Clone buffer address
 
 disp_loop:
     lodsb                                      ;Read square contents
     test al, 08h                               ;Border?
-    jnz disp_cont                              ;Yes, proceed to write square
+    jz disp_piece                              ;No, proceed to write piece
+    inc al                                     ;Increment square contents
 
 disp_piece:
     mov ah, al                                 ;Clone square contents
@@ -56,8 +58,6 @@ disp_piece:
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
     or al, ah                                  ;Apply case
-
-disp_cont:
     stosb                                      ;Write square
     loop disp_loop                             ;Move to next square
     
@@ -81,14 +81,14 @@ main_end:
 ;  DI - Square address
 read_sub:
     mov si, di                                 ;Clone address
-    mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
+    mov di, offset board_db + 123 - 160h       ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
     add di, ax                                 ;Add result to base address
     int 21h                                    ;DOS I/O function
     and al, 0Fh                                ;Isolate number (expected 1-8)
-    xchg ah, al                                ;Flip BCD digits
-    aad                                        ;Multiply AH by 10 and add AL
+    mov ah, 12                                 ;
+    mul ah                                     ;Multiply by 12
     sub di, ax                                 ;Subtract result from base address
     ret
 read_end:
@@ -123,7 +123,7 @@ move_sub:
 
 next:
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 22               ;Start from top left corner
+    mov bp, offset board_db + 28               ;Start from top left corner
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
@@ -230,20 +230,20 @@ moves_db:
     moves_rook   db vec_rook   - moves_rook   - 1
     moves_queen  db vec_king   - moves_queen  - 1
 
-    vec_knight   db   8,  12,  19,  21,   0 ;Fall through 1 byte
-    vec_pawn     db  10
-    vec_bishop   db   9,  11,   0
-    vec_king     db   9,  11
-    vec_rook     db  10,   1
+    vec_knight   db  10,  14,  23,  25,   0 ;Fall through 1 byte
+    vec_pawn     db  12
+    vec_bishop   db  11,  13,   0
+    vec_king     db  11,  13
+    vec_rook     db  12,   1
 
 eval_db: ;Fall through 1 byte
     db 0, ?, 1, 3, 3, 5, 9
 
 disp_db: ;Fall through 1 byte
-    db 46, "?PBNRQ"
+    db 46, 09h, "PBNRQK"
     
-init_db: ;Fall through 1 byte
-    db 'K', 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
+init_db:
+    db 08, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
     db 22h, 00h, 00h, 00h, 00h, 12h
     db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
 
