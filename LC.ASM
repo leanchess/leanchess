@@ -68,19 +68,21 @@ disp_done:
 
 play:
     mov dx, 1828h                              ;Set player's and opponent's colors
+    call read_sub                              ;Read source square
+    mov si, di                                 ;Clone address
+    call read_sub                              ;Read destination square
+    call move_sub                              ;Perform human's move
     mov cl, 3                                  ;Set search depth
-    push offset main_loop                      ;Repeat forever
-    mov ax, offset move_sub                    ;Perform two moves:
-    push ax                                    ;Perform computer's move
-    push ax                                    ;Perform human's move
-    push offset read_sub                       ;Read destination square
+    call next_sub                              ;Find computer's move
+    xor cx, cx                                 ;Clear depth
+    call move_sub                              ;Perform computer's move
+    jmp main_loop                              ;Repeat forever
 main_end:
 
 ;Read square from input
 ;Output:
 ;  DI - Square address
 read_sub:
-    mov si, di                                 ;Clone address
     mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
@@ -136,7 +138,7 @@ move_cont:
     pop bx                                     ;Restore destination square contents
     jcxz sub_ret                               ;If depth is zero, return
 
-next:
+next_sub:
     pusha                                      ;Save all GP registers
     mov bp, offset board_db + 22               ;Start from top left corner
     mov cl, 78                                 ;Ranks * width - margin width
