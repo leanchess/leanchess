@@ -68,31 +68,24 @@ disp_done:
     int 21h                                    ;DOS I/O function
 
 play_loop:
+    push offset play_loop                      ;Repeat forever
+    push offset move_sub                       ;Perform human's move
     call read_sub                              ;Read source square
     jz play_cont                               ;Enter pressed, proceed to search
-    mov si, di                                 ;Clone address
-    call read_sub                              ;Read destination square
     mov dx, 1828h                              ;Set player's and opponent's colors
-    call move_sub                              ;Perform human's move
-    jmp play_loop                              ;Repeat forever
-
-play_cont:
-    mov cl, 3                                  ;Set search depth
-    call next_sub                              ;Find computer's move
-    xor cx, cx                                 ;Clear depth
-    call move_sub                              ;Perform computer's move
-    jmp main_loop                              ;Repeat forever
-main_end:
 
 ;Read square from input
 ;Output:
 ;  DI - Square address
 read_sub:
-    mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
     cmp al, 0Dh                                ;Enter pressed?
     jz sub_ret                                 ;Yes, proceed to return
+
+read_cont:
+    mov si, di                                 ;Clone address
+    mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
     add di, ax                                 ;Add result to base address
     int 21h                                    ;DOS I/O function
     and al, 0Fh                                ;Isolate number (expected 1-8)
@@ -103,6 +96,12 @@ read_sub:
 sub_ret:
     ret
 read_end:
+
+play_cont:
+    mov cl, 3                                  ;Set search depth
+    call next_sub                              ;Find computer's move
+    push offset main_loop                      ;Repeat forever
+    xor cx, cx                                 ;Clear depth
 
 ;Perform move and find best next move
 ;Input:
