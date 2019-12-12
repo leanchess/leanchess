@@ -41,7 +41,6 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
-    push dx                                    ;Save player's and opponent's colors
     mov cl, 96                                 ;Ranks * width
     mov si, offset board_db + 26               ;Grab two preceding tabs
     mov di, offset buffer_db                   ;Set buffer address
@@ -93,6 +92,7 @@ sub_ret:
 read_end:
 
 play_cont:
+    pop ax                                     ;Clear stack
     mov cl, 3                                  ;Set search depth
     call next_sub                              ;Find computer's move
     push offset main_loop                      ;Repeat forever
