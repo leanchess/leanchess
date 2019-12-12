@@ -62,11 +62,11 @@ disp_done:
     int 21h                                    ;DOS I/O function
 
 play_loop:
-    push offset play_loop                      ;Repeat forever
-    push offset move_sub                       ;Perform human's move
     call read_sub                              ;Read source square
     jz play_cont                               ;Enter pressed, proceed to search
     mov dx, 1828h                              ;Set player's and opponent's colors
+    push offset play_loop                      ;Repeat forever
+    push offset move_sub                       ;Perform human's move
 
 ;Read square from input
 ;Output:
@@ -92,7 +92,6 @@ sub_ret:
 read_end:
 
 play_cont:
-    pop ax                                     ;Clear stack
     mov cl, 3                                  ;Set search depth
     call next_sub                              ;Find computer's move
     push offset main_loop                      ;Repeat forever
