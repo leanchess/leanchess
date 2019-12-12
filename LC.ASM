@@ -78,7 +78,7 @@ main_end:
 ;Output:
 ;  DI - Square address
 read_sub:
-    mov si, di                                 ;Clone address
+    mov bp, di                                 ;Clone address
     mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
@@ -98,27 +98,24 @@ read_end:
 ;  DL - Player's color + border
 ;  DH - Opponent's color + border
 ;  CX - Search depth
-;  SI - Source square address
+;  BP - Source square address
 ;  DI - Destination square address
 ;Output:
 ;  AL - Player's max value
 ;  AH - Opponent's max value
-;  BL - Original destination square contents
 ;  DL - Opponent's color + border
 ;  DH - Player's color + border
 ;  SI - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
     xor ax, ax                                 ;Clear contents + opponent's max value
-    xchg al, [si]                              ;Read and write source square
+    xchg al, [bp]                              ;Read and write source square
     xchg al, [di]                              ;Read and write destination square
-    push ax                                    ;Save destination square contents
     xchg dl, dh                                ;Swap player's and opponent's colors
     
     and al, 07h                                ;Isolate piece type
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get player's gain
-    pop bx                                     ;Restore destination square contents
     jcxz sub_ret                               ;If depth is zero, return
 
 next:
@@ -150,6 +147,7 @@ dest_loop:
     cbw                                        ;Extend vector's sign
     add di, ax                                 ;Calculate destination square address
     mov ah, [di]                               ;Read destination square
+    mov bh, ah                                 ;Clone destination square contents
     test ah, dh                                ;Player's piece or border?
     jnz vec_cont                               ;Yes, proceed to next vector
     
@@ -179,28 +177,26 @@ eval:
     push bp                                    ;Save source square address
     push di                                    ;Save destination square address
     
-    mov si, bp                                 ;Clone source square address
-    mov bp, sp                                 ;Clone stack pointer
-    mov cx, [bp + 32]                          ;Read current depth
+    mov si, sp                                 ;Clone stack pointer
+    mov cx, [si + 32]                          ;Read current depth
     dec cx                                     ;Decrement depth
     call move_sub                              ;Recursively call self
-    mov ah, [bp + 35]                          ;Read player's max value
+    mov ah, [si + 35]                          ;Read player's max value
     cmp al, ah                                 ;Max value exceeds current value?
     pop di                                     ;Restore destination square address
-    pop si                                     ;Restore source square address
+    pop bp                                     ;Restore source square address
     jl undo                                    ;Yes, proceed to undo move
 
 best:
-    mov [bp + 35], al                          ;Write max value
-    mov [bp + 20], di                          ;Write destination square address
-    mov [bp + 22], si                          ;Write source square address
+    mov [si + 35], al                          ;Write max value
+    mov [si + 20], di                          ;Write destination square address
+    mov [si + 24], bp                          ;Write source square address
 
-undo:
-    xchg bl, [di]                              ;Read and write original destination square
-    mov [si], bl                               ;Write original source square
-    test [di], dh                              ;Opponent's piece (or border)?
-    
+undo:    
     popa                                       ;Restore all GP registers
+    xchg bh, [di]                              ;Read and write original destination square
+    mov [bp], bh                               ;Write original source square
+    test [di], dl                              ;Opponent's piece (or border)?
     jnz vec_cont                               ;Yes, proceed to next vector
     
     test bl, bl                                ;Check piece type
