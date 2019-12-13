@@ -22,6 +22,7 @@ start:
     int 10h                                    ;BIOS display mode 0
     mov si, offset init_db                     ;Set row metadata address
     mov di, offset board_db                    ;Set board address
+    mov dx, 1828h                              ;Set player's and opponent's colors
 
 init_loop:
     push cx                                    ;Save row counter
@@ -41,6 +42,7 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
+    push dx
     mov cl, 96                                 ;Ranks * width
     mov si, offset board_db + 26               ;Grab two preceding tabs
     mov di, offset buffer_db                   ;Set buffer address
@@ -61,10 +63,13 @@ disp_done:
     stosb                                      ;Write string terminator
     int 21h                                    ;DOS I/O function
 
+play:
+    pop dx
+    push offset main_loop                      ;Repeat forever
+
 play_loop:
     call read_sub                              ;Read source square
     jz play_cont                               ;Enter pressed, proceed to search
-    mov dx, 1828h                              ;Set player's and opponent's colors
     push offset play_loop                      ;Repeat forever
     push offset move_sub                       ;Perform human's move
 
@@ -94,7 +99,6 @@ read_end:
 play_cont:
     mov cl, 3                                  ;Set search depth
     call next_sub                              ;Find computer's move
-    push offset main_loop                      ;Repeat forever
 
 ;Perform move and find best next move
 ;Input:
@@ -127,7 +131,6 @@ move_cont:
     or al, ah                                  ;Apply piece type
     and al, 0B7h                               ;Remove border
     mov [di], al                               ;Write destination square
-    xchg dl, dh                                ;Swap player's and opponent's colors
     
     pop ax                                     ;Restore destination and source square contents
     push ax                                    ;Save destination and source square contents
@@ -138,6 +141,7 @@ move_cont:
     jcxz sub_ret                               ;If depth is zero, return
 
 next_sub:
+    xchg dl, dh                                ;Swap player's and opponent's colors
     xor ah, ah                                 ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
     mov bp, offset board_db + 28               ;Start from top left corner
