@@ -95,7 +95,6 @@ play_cont:
     mov cl, 3                                  ;Set search depth
     call next_sub                              ;Find computer's move
     push offset main_loop                      ;Repeat forever
-    xor cx, cx                                 ;Clear depth
 
 ;Perform move and find best next move
 ;Input:
