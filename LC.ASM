@@ -292,7 +292,6 @@ next:
     mov cl, 78h                                ;Ranks * width - margin width
 
 src_loop:
-    push cx                                    ;Save source counter
     mov al, [bp]                               ;Read source square
     test al, dl                                ;Opponent's piece or border?
     jnz src_cont                               ;Yes, proceed to next source square
@@ -301,6 +300,7 @@ src_loop:
     and ax, 07h                                ;Isolate piece type
     jz src_cont                                ;No piece, proceed to next source square
     
+    push cx                                    ;Save source counter
     mov bl, al                                 ;Save piece type
     mov si, offset moves_wpawn - 1             ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
@@ -365,9 +365,11 @@ vec_zero:
     or al, al                                  ;Non-zero vector?
     jnz vec_loop                               ;Yes, move to next vector
 
+vec_done:
+    pop cx                                     ;Restore source counter
+
 src_cont:
     inc bp                                     ;Increment source square address
-    pop cx                                     ;Restore source counter
     loop src_loop                              ;Move to next source
     
 move_done:
