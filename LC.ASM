@@ -42,7 +42,7 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
-    push dx
+    push dx                                    ;Save player's and opponent's colors
     mov cl, 96                                 ;Ranks * width
     mov si, offset board_db + 26               ;Grab two preceding tabs
     mov di, offset buffer_db                   ;Set buffer address
@@ -64,7 +64,7 @@ disp_done:
     int 21h                                    ;DOS I/O function
 
 play:
-    pop dx
+    pop dx                                     ;Restore player's and opponent's colors
     push offset main_loop                      ;Repeat forever
 
 play_loop:
