@@ -20,8 +20,19 @@ code segment
     
 start:
     int 10h                                    ;BIOS display mode 0
+
+init_rand:
+    mov ah, 2Ch                                ;Get current time
+    int 21h                                    ;DOS I/O function
+    mov ax, dx                                 ;Clone seconds + hundredths
+    xor dx, dx                                 ;Clear upper word
+    mov bx, 960                                ;Set denominator
+    div bx                                     ;Divide by total s.p. count
+
+init:
     mov si, offset init_db                     ;Set row metadata address
     mov di, offset board_db                    ;Set board address
+    mov cx, 13                                 ;Set row count
 
 init_loop:
     push cx                                    ;Save row counter
@@ -30,13 +41,58 @@ init_loop:
     stosw                                      ;Write two bytes
     mov cl, 8                                  ;Set square counter
     lodsb                                      ;Read one byte
+    rep stosb                                  ;Write row
     test al, 80h                               ;First rank?
     jz init_cont                               ;No, proceed to write row
-    dec si                                     ;Back one byte
-    rep movsb                                  ;Copy row
-    
+
+rand:
+    push dx                                    ;Save s.p.
+    push si                                    ;Save row metadata address
+    push di                                    ;Save square address
+    xchg ax, dx                                ;Swap color with s.p.
+    mov cl, 2                                  ;Set bishop counter
+    mov si, offset rand_db                     ;Set piece type metadata address
+    sub di, 9                                  ;Return to first square in row - 1
+
+bish_loop:
+    mov bx, 4                                  ;Set denominator
+    div bl                                     ;Divide s.p. by 4
+    mov bl, ah                                 ;Clone square counter
+    shl bl, 1                                  ;Multiply by 2
+    add bl, cl                                 ;Subtract bishop counter
+    or byte ptr [di + bx], 03h                 ;Set piece type
+    xor ah, ah                                 ;Clear upper byte of s.p.
+    loop bish_loop                             ;Move to next bishop
+
+rand_cont:
+    mov cl, 6                                  ;Set piece counter
+
+rand_loop:
+    push di                                    ;Save square address
+    xor ah, ah                                 ;Clear upper byte of s.p.
+    div cl                                     ;Divide s.p. by piece counter
+    push ax                                    ;Save updated s.p.
+    inc ah                                     ;Increment square counter
+
+scan_loop:
+    inc di                                     ;Increment square address
+    cmp [di], dl                               ;Vacant square?
+    jne scan_loop                              ;No, move to next square
+    dec ah                                     ;Decrement square counter
+    jne scan_loop                              ;Move to next square
+
+    lodsb                                      ;Read piece type
+    or [di], al                                ;Set piece type
+    pop ax                                     ;Restore updated s.p.
+    pop di                                     ;Restore square address
+    loop rand_loop                             ;Move to next piece
+
+rand_done:
+    pop di                                     ;Restore square address
+    pop si                                     ;Restore row metadata address
+    pop dx                                     ;Restore s.p.
+
 init_cont:
-    rep stosb                                  ;Write row
     pop cx                                     ;Restore row counter
     loop init_loop                             ;Move to next row
 
@@ -59,7 +115,7 @@ disp_loop:
 disp_done:
     mov ax, 0924h                              ;String terminator/write string
     stosb                                      ;Write string terminator
-    int 21h                                    ;BIOS output function
+    int 21h                                    ;DOS I/O function
 
 play:
     mov dx, 1828h                              ;Set player's and opponent's colors
@@ -233,11 +289,12 @@ eval_db: ;Fall through 1 byte
 
 disp_db: ;Fall through 1 byte
     db 46, "PpBNRQK", 09h
-    
+
+rand_db:
+    db 06h, 04h, 04h, 05h, 07h, 05h
+
 init_db:
-    db 08, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
-    db 22h, 00h, 00h, 00h, 00h, 11h
-    db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
+    db 08h, 08h, 0A0h, 22h, 00h, 00h, 00h, 00h, 11h, 90h
 
 board_db: ;Fall through 3 bytes
     db 156 dup(?)
