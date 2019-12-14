@@ -17,7 +17,7 @@
 code segment
     org 100h
     assume cs: code
-    
+
 start:
     int 10h                                    ;BIOS display mode 0
 
@@ -47,11 +47,9 @@ init_loop:
 
 rand:
     push dx                                    ;Save s.p.
-    push si                                    ;Save row metadata address
     push di                                    ;Save square address
     xchg ax, dx                                ;Swap color with s.p.
     mov cl, 2                                  ;Set bishop counter
-    mov si, offset rand_db                     ;Set piece type metadata address
     sub di, 9                                  ;Return to first square in row - 1
 
 bish_loop:
@@ -59,37 +57,44 @@ bish_loop:
     div bl                                     ;Divide s.p. by 4
     mov bl, ah                                 ;Clone square counter
     shl bl, 1                                  ;Multiply by 2
-    add bl, cl                                 ;Subtract bishop counter
+    add bl, cl                                 ;Add bishop counter
     or byte ptr [di + bx], 03h                 ;Set piece type
     xor ah, ah                                 ;Clear upper byte of s.p.
     loop bish_loop                             ;Move to next bishop
 
-rand_cont:
+queen:
     mov cl, 6                                  ;Set piece counter
-
-rand_loop:
     push di                                    ;Save square address
-    xor ah, ah                                 ;Clear upper byte of s.p.
     div cl                                     ;Divide s.p. by piece counter
-    push ax                                    ;Save updated s.p.
     inc ah                                     ;Increment square counter
 
-scan_loop:
+queen_loop:
     inc di                                     ;Increment square address
     cmp [di], dl                               ;Vacant square?
-    jne scan_loop                              ;No, move to next square
+    jne queen_loop                             ;No, move to next square
     dec ah                                     ;Decrement square counter
-    jne scan_loop                              ;Move to next square
-
-    lodsb                                      ;Read piece type
-    or [di], al                                ;Set piece type
-    pop ax                                     ;Restore updated s.p.
+    jne queen_loop                             ;Move to next square
+    or [di], cl                                ;Set piece type
     pop di                                     ;Restore square address
-    loop rand_loop                             ;Move to next piece
+
+knr:
+    mov bx, offset rand_db                     ;Set base piece types' address
+    xlat                                       ;Get piece types
+    mov bl, 3                                  ;Three piece type options
+    dec cx                                     ;Five piece types per record
+
+knr_loop:
+    inc di                                     ;Increment square address
+    cmp [di], dl                               ;Vacant square?
+    jnz knr_loop                               ;No, move to next square
+    xor ah, ah                                 ;Clear upper byte
+    div bl                                     ;Get piece type
+    xor ah, 05h                                ;Adjust piece type (0->5, 1->4, 2->7)
+    or [di], ah                                ;Write square
+    loop knr_loop                              ;Move to next square
 
 rand_done:
     pop di                                     ;Restore square address
-    pop si                                     ;Restore row metadata address
     pop dx                                     ;Restore s.p.
 
 init_cont:
@@ -290,8 +295,21 @@ eval_db: ;Fall through 1 byte
 disp_db: ;Fall through 1 byte
     db 46, "PpBNRQK", 09h
 
+R  equ 0
+N  equ 1
+K  equ 2
+
 rand_db:
-    db 06h, 04h, 04h, 05h, 07h, 05h
+    db N + N * 3 + R * 9 + K * 27 + R * 81
+    db N + R * 3 + N * 9 + K * 27 + R * 81
+    db N + R * 3 + K * 9 + N * 27 + R * 81
+    db N + R * 3 + K * 9 + R * 27 + N * 81
+    db R + N * 3 + N * 9 + K * 27 + R * 81
+    db R + N * 3 + K * 9 + N * 27 + R * 81
+    db R + N * 3 + K * 9 + R * 27 + N * 81
+    db R + K * 3 + N * 9 + N * 27 + R * 81
+    db R + K * 3 + N * 9 + R * 27 + N * 81
+    db R + K * 3 + R * 9 + N * 27 + N * 81
 
 init_db:
     db 08h, 08h, 0A0h, 22h, 00h, 00h, 00h, 00h, 11h, 90h
