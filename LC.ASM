@@ -128,6 +128,7 @@ move_cont:
     or al, dh                                  ;Apply player's color
     or al, ah                                  ;Apply piece type
     and al, 0B7h                               ;Remove border
+    or al, 40h                                 ;Mark as moved
     mov [di], al                               ;Write destination square
     
     pop ax                                     ;Restore destination and source square contents
@@ -150,9 +151,11 @@ src_loop:
     test al, dl                                ;Opponent's piece or border?
     jnz src_cont                               ;Yes, proceed to next source square
     
+    mov bh, al                                 ;Clone source square contents
     and ax, 07h                                ;Isolate piece type
     jz src_cont                                ;No piece, proceed to next source square
     
+    push cx                                    ;Save square counter
     mov bl, al                                 ;Save piece type
     mov si, offset moves_knight - 2            ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
@@ -161,6 +164,11 @@ src_loop:
 
 vec_loop:
     lodsb                                      ;Read vector
+
+    xor cx, cx                                 ;Initialize range
+    test bl, bl                                ;Check piece type
+    jp sign_loop                               ;Slider, proceed to clone address
+    inc cx                                     ;Crawler, limit range
 
 sign_loop:
     mov di, bp                                 ;Clone source square address
@@ -193,6 +201,9 @@ pawn_cont:
     pop ax                                     ;Restore vector
     jnp vec_cont                               ;Odd, proceed to next vector
 
+    test bh, 40h                               ;Piece moved?
+    jz pawn_inc                                ;No, proceed to increase range
+
 eval:
     pusha                                      ;Save all GP registers
     push bp                                    ;Save source square address
@@ -200,19 +211,19 @@ eval:
     
     mov si, bp                                 ;Clone source square address
     mov bp, sp                                 ;Clone stack pointer
-    mov cx, [bp + 32]                          ;Read current depth
+    mov cx, [bp + 34]                          ;Read current depth
     dec cx                                     ;Decrement depth
     call move_sub                              ;Recursively call self
-    mov ah, [bp + 35]                          ;Read player's max value
+    mov ah, [bp + 37]                          ;Read player's max value
     cmp al, ah                                 ;Max value exceeds current value?
     pop di                                     ;Restore destination square address
     pop si                                     ;Restore source square address
     jl undo                                    ;Yes, proceed to undo move
 
 best:
-    mov [bp + 35], al                          ;Write max value
-    mov [bp + 20], di                          ;Write destination square address
-    mov [bp + 22], si                          ;Write source square address
+    mov [bp + 37], al                          ;Write max value
+    mov [bp + 22], di                          ;Write destination square address
+    mov [bp + 24], si                          ;Write source square address
 
 undo:
     mov [di], bl                               ;Write original destination square
@@ -220,15 +231,13 @@ undo:
     test [di], dh                              ;Opponent's piece (or border)?
     
     popa                                       ;Restore all GP registers
-    jnz vec_cont                               ;Yes, proceed to next vector
-    
-    test bl, bl                                ;Check piece type
-    jp dest_loop                               ;Slider, move to next destination
+    loopz dest_loop                            ;No, move to next destination
 
 vec_cont:
     neg al                                     ;Invert vector
     js sign_loop                               ;Negative, proceed to reset destination address
     jnz vec_loop                               ;Non-zero, move to next vector
+    pop cx                                     ;Restore square counter
 
 src_cont:
     inc bp                                     ;Increment source square address
@@ -239,6 +248,11 @@ move_done:
     sub al, ah                                 ;Calculate player's max value
     ret
 move_end:
+
+pawn_inc:
+    or bh, 40h                                 ;Mark as moved
+    inc cx                                     ;Increase range
+    jmp eval                                   ;Proceed to evaluate move
 
 moves_db:
     moves_knight db vec_knight - moves_knight - 1
