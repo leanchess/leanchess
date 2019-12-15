@@ -129,7 +129,7 @@ move_cont:
     or al, ah                                  ;Apply piece type
     and al, 0B7h                               ;Remove border
     or al, 40h                                 ;Mark as moved
-    mov [di], al                               ;Write destination square
+    stosb                                      ;Write destination square
     
     pop ax                                     ;Restore destination and source square contents
     push ax                                    ;Save destination and source square contents
