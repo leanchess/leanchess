@@ -25,7 +25,8 @@ start:
 
 init_loop:
     push cx                                    ;Save row counter
-    mov ax, 0A0Dh                              ;AL=CR, AH=LF
+    mov ax, 0808h                              ;Border
+    stosw                                      ;Write two bytes
     stosw                                      ;Write two bytes
     mov cl, 8                                  ;Set square counter
     lodsb                                      ;Read one byte
@@ -40,18 +41,20 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
-    mov cl, 92                                 ;(Ranks + 1) * width + margin width + CRLF
-    mov si, offset board_db + 10               ;Grab preceding CR/LF
+    mov cl, 106                                ;(Ranks + 1) * width + margin width
+    mov si, offset board_db + 21               ;Grab two preceding tabs
     mov di, offset buffer_db                   ;Set buffer address
     mov dx, di                                 ;Clone buffer address
 
 disp_loop:
     lodsb                                      ;Read square contents
-    test al, 30h                               ;Piece?
+    test al, 38h                               ;Piece or border?
     jz disp_cont                               ;No, proceed to write square
 
 disp_piece:
     inc ax                                     ;Zero-align king
+    cmp al, 09h                                ;Border?
+    jz disp_cont                               ;Yes, proceed to write square
     and al, 27h                                ;Isolate piece type and black/lowercase
     add al, 4Bh                                ;King, (none), (reserved), kNight, bishOp, Pawn, Queen, Rook
     
@@ -79,14 +82,14 @@ main_end:
 ;  DI - Square address
 read_sub:
     mov bp, di                                 ;Clone address
-    mov di, offset board_db + 101 - 15Fh       ;Bottom right corner + margin - ASCII offset
+    mov di, offset board_db + 123 - 160h       ;Bottom right corner + margin - ASCII offset
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
     add di, ax                                 ;Add result to base address
     int 21h                                    ;DOS I/O function
     and al, 0Fh                                ;Isolate number (expected 1-8)
-    xchg ah, al                                ;Flip BCD digits
-    aad                                        ;Multiply AH by 10 and add AL
+    mov ah, 12                                 ;
+    mul ah                                     ;Multiply by 12
     sub di, ax                                 ;Subtract result from base address
 
 sub_ret:
@@ -120,7 +123,7 @@ move_sub:
 
 next:
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 22               ;Start from top left corner
+    mov bp, offset board_db + 28               ;Start from top left corner
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
@@ -224,11 +227,11 @@ moves_db:
     moves_queen  db vec_king   - moves_queen  - 1
     moves_rook   db vec_rook   - moves_rook   - 1
 
-    vec_knight   db   8,  12,  19,  21,   0 ;Fall through 1 byte
-    vec_pawn     db  10
-    vec_bishop   db   9,  11,   0
-    vec_king     db   9,  11
-    vec_rook     db  10,   1
+    vec_knight   db  10,  14,  23,  25,   0 ;Fall through 1 byte
+    vec_pawn     db  12
+    vec_bishop   db  11,  13,   0
+    vec_king     db  11,  13
+    vec_rook     db  12,   1
 
 eval_db: ;Fall through 1 byte
     db 0, 0, 3, 3, 1, 9, 5, 46
@@ -239,7 +242,7 @@ init_db:
     db 96h, 92h, 93h, 95h, 97h, 93h, 92h, 96h
 
 board_db: ;Fall through 3 bytes
-    db 130 dup(?)
+    db 156 dup(?)
 
 buffer_db:
 
