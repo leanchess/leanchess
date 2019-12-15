@@ -17,7 +17,34 @@
 code segment
     org 100h
     assume cs: code
-    
+
+_PAWN  equ 0001b
+_KING  equ 0010b
+ROOK   equ 0011b
+KNIGHT equ 0100b
+BISHOP equ 0101b
+QUEEN  equ 0110b
+
+CHANCE equ 1000b
+ARCHIE equ 1101b
+PIECE  equ 1111b
+
+NULL   equ 00h
+MOVED  equ 08h
+WHITE  equ 10h
+BLACK  equ 20h
+BORDER equ 40h
+PROMO  equ 80h
+
+FILE_COUNT    equ 10
+RANK_COUNT    equ  8
+BOARD_WIDTH   equ 12
+BOARD_HEIGHT  equ 13
+MARGIN_WIDTH  equ  2
+MARGIN_HEIGHT equ  2
+
+DEPTH equ 3
+
 start:
     int 10h                                    ;BIOS display mode 0
     mov si, offset init_db                     ;Set row metadata address
@@ -25,45 +52,67 @@ start:
 
 init_loop:
     push cx                                    ;Save row counter
-    mov ax, 0808h                              ;Border
-    stosw                                      ;Write two bytes
-    stosw                                      ;Write two bytes
-    mov cl, 8                                  ;Set square counter
+    mov al, BORDER                             ;Border
+    stosb                                      ;Write one byte
+    stosb                                      ;Write one byte
+    mov cl, FILE_COUNT                         ;Set square counter
     lodsb                                      ;Read one byte
-    test al, 80h                               ;First rank?
-    jz init_cont                               ;No, proceed to write row
-    dec si                                     ;Back one byte
-    rep movsb                                  ;Copy row
-    
-init_cont:
     rep stosb                                  ;Write row
+    test al, PROMO                             ;First rank?
+    jz init_cont                               ;No, proceed to write row
+
+init_row:
+    push si                                    ;Save row metadata address
+    mov cl, FILE_COUNT                         ;Set square counter
+    mov si, offset capa_db                     ;Set row metadata address
+    sub di, cx                                 ;Restore square address
+
+init_row_loop:
+    lodsb                                      ;Read piece type
+    or [di], al                                ;Set piece type
+    inc di                                     ;Increment square address
+    loop init_row_loop                         ;Move to next square
+    pop si                                     ;Restore row metadata address
+
+init_cont:
     pop cx                                     ;Restore row counter
     loop init_loop                             ;Move to next row
 
 main_loop:
-    mov cl, 101                                ;Ranks * width + margin width
-    mov si, offset board_db + 21               ;Grab preceding line
+    mov cl, RANK_COUNT * (FILE_COUNT + 1) + MARGIN_WIDTH
+    mov si, offset board_db + BOARD_WIDTH * MARGIN_HEIGHT - MARGIN_WIDTH
     mov di, offset buffer_db                   ;Set buffer address
     mov dx, di                                 ;Clone buffer address
 
 disp_loop:
     lodsb                                      ;Read square contents
+    test al, BORDER                            ;Border?
+    jz disp_piece                              ;No, proceed to display piece
+
+disp_border:
+    mov al, 0Ah                                ;LF
+    inc si                                     ;Skip border square
+    jmp disp_cont                              ;Proceed to write square
+
+disp_piece:
     mov ah, al                                 ;Clone square contents
-    and ax, 200Fh                              ;Isolate piece type/border and case
+    and ax, 200Fh                              ;Isolate piece type and case
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
     or al, ah                                  ;Apply case
+
+disp_cont:
     stosb                                      ;Write square
     loop disp_loop                             ;Move to next square
-    
+
 disp_done:
-    mov ax, 0924h                              ;String terminator/write string
+    mov ax, 0924h                              ;String terminator/Write string
     stosb                                      ;Write string terminator
-    int 21h                                    ;BIOS output function
+    int 21h                                    ;DOS I/O function
 
 play:
-    mov dx, 1828h                              ;Set player's and opponent's colors
-    mov cl, 3                                  ;Set search depth
+    mov dx, 5060h                              ;Set player's and opponent's colors
+    mov cl, DEPTH                              ;Set search depth
     push offset main_loop                      ;Repeat forever
     mov ax, offset move_sub                    ;Perform two moves:
     push ax                                    ;Perform computer's move
@@ -76,19 +125,44 @@ main_end:
 ;  DI - Square address
 read_sub:
     mov bp, di                                 ;Clone address
-    mov di, offset board_db + 123 - 160h       ;Bottom right corner + margin - ASCII offset
+    mov di, offset board_db + BOARD_WIDTH * (RANK_COUNT + MARGIN_HEIGHT) + MARGIN_WIDTH - 161h
     mov ah, 01h                                ;Read character
     int 21h                                    ;DOS I/O function
     add di, ax                                 ;Add result to base address
     int 21h                                    ;DOS I/O function
-    and al, 0Fh                                ;Isolate number (expected 1-8)
-    mov ah, 12                                 ;
-    mul ah                                     ;Multiply by 12
+    and al, 0Fh                                ;Isolate number (expected 1-10)
+    mov ah, BOARD_WIDTH                        ;Set board width
+    mul ah                                     ;Multiply by width
     sub di, ax                                 ;Subtract result from base address
-
-sub_ret:
     ret
 read_end:
+
+eval_sub:
+    pusha                                      ;Save all GP registers
+    push bp                                    ;Save source square address
+    push di                                    ;Save destination square address
+    
+    mov si, sp                                 ;Clone stack pointer
+    mov cx, [si + 36]                          ;Read current depth
+    dec cx                                     ;Decrement depth
+    call move_sub                              ;Perform move and find best next move
+    mov ah, [si + 39]                          ;Read player's max value
+    cmp al, ah                                 ;Max value exceeds current value?
+    pop di                                     ;Restore destination square address
+    pop bp                                     ;Restore source square address
+    jl undo                                    ;Yes, proceed to undo move
+
+best:
+    mov [si + 39], al                          ;Write max value
+    mov [si + 24], di                          ;Write destination square address
+    mov [si + 28], bp                          ;Write source square address
+
+undo:
+    mov [di], bl                               ;Write original destination square
+    mov [bp], bh                               ;Write original source square
+    test [di], dh                              ;Opponent's piece (or border)?
+    popa                                       ;Restore all GP registers
+    ret
 
 ;Perform move and find best next move
 ;Input:
@@ -111,34 +185,38 @@ move_sub:
     mov ah, [bp]                               ;Read source square
     push ax                                    ;Save destination and source square contents
     sub [bp], ah                               ;Clear source square
-    or ah, 40h                                 ;Set moved flag
+    test ah, 04h                               ;Pawn/King/Rook?
+    jnz move_cont                              ;No, proceed to write destination square
+    or ah, MOVED                               ;Mark as moved
+
+move_cont:
     mov [di], ah                               ;Write destination square
     xchg dl, dh                                ;Swap player's and opponent's colors
-    
-    and al, 07h                                ;Isolate piece type
+
+    and ax, PIECE                              ;Isolate piece type + clear max value
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get player's gain
     pop bx                                     ;Restore destination and source square contents
-    jcxz sub_ret                               ;If depth is zero, return
+    jcxz move_ret                              ;If depth is zero, return
 
 next:
-    xor ah, ah                                 ;Initialize opponent's max value
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 28               ;Start from top left corner
-    mov cl, 78                                 ;Ranks * width - margin width
+    mov bp, offset board_db + BOARD_WIDTH * MARGIN_HEIGHT + MARGIN_WIDTH
+    mov cl, BOARD_WIDTH * RANK_COUNT - MARGIN_WIDTH
 
 src_loop:
     mov al, [bp]                               ;Read source square
     test al, dl                                ;Opponent's piece or border?
     jnz src_cont                               ;Yes, proceed to next source square
 
-    mov bh, al                                 ;Clone source square contents
-    and ax, 07h                                ;Isolate piece type
+comp_loop:
+    mov bh, al                                 ;Save source square contents
+    and ax, 07h                                ;Isolate base piece type
     jz src_cont                                ;No piece, proceed to next source square
 
     push cx                                    ;Save square counter
     mov bl, al                                 ;Save piece type
-    mov si, offset moves_wpawn - 1             ;Set base metadata address
+    mov si, offset moves_db                    ;Set base metadata address
     add si, ax                                 ;Calculate absolute metadata address
     lodsb                                      ;Read relative vectors address
     add si, ax                                 ;Calculate absolute vectors address
@@ -160,9 +238,9 @@ dest_loop:
     mov ah, [di]                               ;Read destination square
     test ah, dh                                ;Player's piece or border?
     jnz vec_cont                               ;Yes, proceed to next vector
-    
-    cmp bl, 03h                                ;Black or white pawn?
-    jge eval                                   ;No, proceed to evaluate move
+
+    cmp bl, _PAWN                              ;Pawn?
+    jne eval                                   ;No, proceed to evaluate move
 
 pawn:
     test al, 01h                               ;Any file change?
@@ -175,88 +253,83 @@ pawn_cont:
     test ah, dl                                ;Opponent's piece (or border)?
     jz vec_cont                                ;No, proceed to next vector
 
-    test bh, 40h                               ;Piece moved?
+    push ax                                    ;Save vector
+    and al, 80h                                ;Isolate sign bit
+    shr al, 2                                  ;Align with black bit
+    xor al, dh                                 ;Flip color and border bits
+    pop ax                                     ;Restore vector
+    jnp vec_cont                               ;Odd, proceed to next vector
+
+    test bh, MOVED                             ;Piece moved?
     jnz eval                                   ;Yes, proceed to evaluate move
-    or bh, 40h                                 ;Mark as moved
+    or bh, MOVED                               ;Mark as moved
     inc cx                                     ;Increase range
 
 eval:
-    pusha                                      ;Save all GP registers
-    push bp                                    ;Save source square address
-    push di                                    ;Save destination square address
-    
-    mov si, sp                                 ;Clone stack pointer
-    mov cx, [si + 34]                          ;Read current depth
-    dec cx                                     ;Decrement depth
-    call move_sub                              ;Recursively call self
-    mov ah, [si + 37]                          ;Read player's max value
-    cmp al, ah                                 ;Max value exceeds current value?
-    pop di                                     ;Restore destination square address
-    pop bp                                     ;Restore source square address
-    jl undo                                    ;Yes, proceed to undo move
-
-best:
-    mov [si + 37], al                          ;Write max value
-    mov [si + 22], di                          ;Write destination square address
-    mov [si + 26], bp                          ;Write source square address
-
-undo:
-    mov [di], bl                               ;Write original destination square
-    mov [bp], bh                               ;Write original source square
-    test [di], dh                              ;Opponent's piece (or border)?
-    popa                                       ;Restore all GP registers
+    call eval_sub                              ;Evaluate move
     loopz dest_loop                            ;No, move to next destination
 
 vec_cont:
-    cmp bl, 03h                                ;Black or white pawn?
-    jl vec_zero                                ;Yes, proceed to zero vector check
-
     neg al                                     ;Invert vector
     js sign_loop                               ;Negative, proceed to reset destination address
-
-vec_zero:
-    or al, al                                  ;Non-zero vector?
     jnz vec_loop                               ;Yes, move to next vector
     pop cx                                     ;Restore square counter
+
+    mov al, bh                                 ;Restore source square contents
+    and al, PIECE                              ;Isolate piece type
+    cmp al, ARCHIE                             ;Archbishop?
+    je comp_cont                               ;Yes, proceed to knight moves
+    cmp al, CHANCE                             ;Chancellor?
+    jne src_cont                               ;No, proceed to next source square
+
+comp_cont:
+    mov al, KNIGHT                             ;Revert to knight
+    jmp comp_loop                              ;Proceed to generate knight's moves
 
 src_cont:
     inc bp                                     ;Increment source square address
     loop src_loop                              ;Move to next source
-    
+
 move_done:
     popa                                       ;Restore all GP registers
     sub al, ah                                 ;Calculate player's max value
+
+move_ret:
     ret
 move_end:
 
 moves_db:
-    moves_wpawn  db vec_wpawn  - moves_wpawn  - 1
-    moves_bpawn  db vec_bpawn  - moves_bpawn  - 1
-    moves_bishop db vec_bishop - moves_bishop - 1
-    moves_knight db vec_knight - moves_knight - 1
+    moves_chance db vec_rook   - moves_chance - 1
+    moves_pawn   db vec_pawn   - moves_pawn   - 1
+    moves_king   db vec_king   - moves_king   - 1
     moves_rook   db vec_rook   - moves_rook   - 1
+    moves_knight db vec_knight - moves_knight - 1
+    moves_bishop db vec_bishop - moves_bishop - 1
     moves_queen  db vec_king   - moves_queen  - 1
 
-    vec_bpawn    db  12                     ;Fall through 1 byte
+    vec_pawn     db  12
     vec_bishop   db  11,  13,   0
     vec_knight   db  10,  14,  23,  25,   0
-    vec_wpawn    db -12, -13, -11,   0
     vec_king     db  11,  13
     vec_rook     db  12,   1
 
 eval_db: ;Fall through 1 byte
-    db 0, 1, 1, 3, 3, 5, 9
+    db 0, 1, 46, 5, 3, 3, 9, ?
+    db 9, 1, 46, 5, ?, 8
 
 disp_db: ;Fall through 1 byte
-    db 46, "PpBNRQK", 09h
-    
+    db ".PKRNBQ?"
+    db "CPKR?A"
+
+capa_db:
+    db ROOK, KNIGHT, ARCHIE, BISHOP, QUEEN, _KING, BISHOP, CHANCE, KNIGHT, ROOK
+
 init_db:
-    db 08, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
-    db 22h, 00h, 00h, 00h, 00h, 11h
-    db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
+    db BORDER, BORDER, BLACK OR PROMO, BLACK OR _PAWN
+    db NULL, NULL, NULL, NULL, WHITE OR _PAWN, WHITE OR PROMO
 
 board_db: ;Fall through 3 bytes
-    db 156 dup(?)
+    db BOARD_HEIGHT * BOARD_WIDTH dup(?)
 
 buffer_db:
 
