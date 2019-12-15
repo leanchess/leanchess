@@ -63,18 +63,17 @@ bish_loop:
 
 queen:
     mov cl, 6                                  ;Set piece counter
-    push di                                    ;Save square address
+    xor bx, bx                                 ;Clear queen's position
     div cl                                     ;Divide s.p. by piece counter
     inc ah                                     ;Increment square counter
 
 queen_loop:
-    inc di                                     ;Increment square address
-    cmp [di], dl                               ;Vacant square?
+    inc bx                                     ;Increment square address
+    cmp [di + bx], dl                          ;Vacant square?
     jne queen_loop                             ;No, move to next square
     dec ah                                     ;Decrement square counter
     jne queen_loop                             ;Move to next square
-    or [di], cl                                ;Set piece type
-    pop di                                     ;Restore square address
+    or [di + bx], cl                           ;Set piece type
 
 knr:
     mov bx, offset rand_db                     ;Set base piece types' address
