@@ -53,13 +53,12 @@ rand:
     sub di, 9                                  ;Return to first square in row - 1
 
 bish_loop:
-    mov bx, 4                                  ;Set denominator
-    div bl                                     ;Divide s.p. by 4
-    mov bl, ah                                 ;Clone square counter
+    mov bx, ax                                 ;Clone s.p.
+    and bx, 3                                  ;Isolate bishop's position
     shl bl, 1                                  ;Multiply by 2
     add bl, cl                                 ;Add bishop counter
     or byte ptr [di + bx], 03h                 ;Set piece type
-    xor ah, ah                                 ;Clear upper byte of s.p.
+    shr ax, 2                                  ;Divide s.p. by 4
     loop bish_loop                             ;Move to next bishop
 
 queen:
