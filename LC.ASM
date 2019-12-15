@@ -24,10 +24,6 @@ start:
 init_rand:
     mov ah, 2Ch                                ;Get current time
     int 21h                                    ;DOS I/O function
-    mov ax, dx                                 ;Clone seconds + hundredths
-    xor dx, dx                                 ;Clear upper word
-    mov bx, 960                                ;Set denominator
-    div bx                                     ;Divide by total s.p. count
 
 init:
     mov si, offset init_db                     ;Set row metadata address
@@ -48,13 +44,14 @@ init_loop:
 rand:
     push dx                                    ;Save s.p.
     push di                                    ;Save square address
-    xchg ax, dx                                ;Swap color with s.p.
+    xchg al, dl                                ;Swap color with hundredths
+    xor ah, ah                                 ;Clear upper byte
     mov cl, 2                                  ;Set bishop counter
     sub di, 9                                  ;Return to first square in row - 1
 
 bish_loop:
     mov bx, ax                                 ;Clone s.p.
-    and bx, 3                                  ;Isolate bishop's position
+    and bl, 3                                  ;Isolate bishop's position
     shl bl, 1                                  ;Multiply by 2
     add bl, cl                                 ;Add bishop counter
     or byte ptr [di + bx], 03h                 ;Set piece type
@@ -62,6 +59,7 @@ bish_loop:
     loop bish_loop                             ;Move to next bishop
 
 queen:
+    mov al, dh                                 ;Clone seconds
     mov cl, 6                                  ;Set piece counter
     xor bx, bx                                 ;Clear queen's position
     div cl                                     ;Divide s.p. by piece counter
