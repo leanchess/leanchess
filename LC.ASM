@@ -22,7 +22,6 @@ start:
     int 10h                                    ;BIOS display mode 0
     mov si, offset init_db                     ;Set row metadata address
     mov di, offset board_db                    ;Set board address
-    mov dx, 1828h                              ;Set player's and opponent's colors
 
 init_loop:
     push cx                                    ;Save row counter
@@ -42,7 +41,6 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 main_loop:
-    push dx                                    ;Save player's and opponent's colors
     mov cl, 96                                 ;Ranks * width
     mov si, offset board_db + 26               ;Grab two preceding tabs
     mov di, offset buffer_db                   ;Set buffer address
@@ -64,7 +62,7 @@ disp_done:
     int 21h                                    ;DOS I/O function
 
 play:
-    pop dx                                     ;Restore player's and opponent's colors
+    mov dx, 1828h                              ;Set player's and opponent's colors
     push offset main_loop                      ;Repeat forever
 
 play_loop:
