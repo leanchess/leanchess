@@ -100,7 +100,7 @@ read_end:
 ;  AH - Opponent's max value
 ;  DL - Opponent's color + border
 ;  DH - Player's color + border
-;  SI - Opponent's best source square address
+;  BP - Opponent's best source square address
 ;  DI - Opponent's best destination square address
 move_sub:
     xor ax, ax                                 ;Clear contents + opponent's max value
