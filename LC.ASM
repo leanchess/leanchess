@@ -226,8 +226,9 @@ moves_db:
     moves_pawn   db vec_pawn   - moves_pawn   - 1
     moves_queen  db vec_king   - moves_queen  - 1
     moves_rook   db vec_rook   - moves_rook   - 1
+    moves_king   db vec_king   - moves_king   - 1
 
-    vec_knight   db  10,  14,  23,  25,   0 ;Fall through 1 byte
+    vec_knight   db  10,  14,  23,  25,   0
     vec_pawn     db  12
     vec_bishop   db  11,  13,   0
     vec_king     db  11,  13
