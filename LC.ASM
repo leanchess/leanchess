@@ -136,7 +136,7 @@ move_cont:
     and al, 07h                                ;Isolate piece type
     mov bx, offset eval_db                     ;Set base values' address
     xlat                                       ;Get player's gain
-    pop bx                                     ;Restore destination square contents
+    pop bx                                     ;Restore destination and source square contents
     jcxz sub_ret                               ;If depth is zero, return
 
 next_sub:
@@ -261,9 +261,9 @@ moves_db:
     moves_queen  db vec_king   - moves_queen  - 1
     moves_rook   db vec_rook   - moves_rook   - 1
 
-    vec_knight   db  10,  14,  23,  25,   0 ;Fall through 1 byte
-    vec_pawn     db  12
+    vec_pawn     db  12                     ;Fall through 1 byte
     vec_bishop   db  11,  13,   0
+    vec_knight   db  10,  14,  23,  25,   0
     vec_king     db  11,  13
     vec_rook     db  12,   1
 
