@@ -47,8 +47,24 @@ DEPTH equ 3
 
 start:
     int 10h                                    ;BIOS display mode 0
+
+init_rand:
+    mov ah, 2Ch                                ;Get current time
+    int 21h                                    ;DOS I/O function
+    mov di, offset buffer_db                   ;Set random source address
+    mov ax, dx                                 ;Clone hundredths and seconds
+    shr al, 2                                  ;Derive B1/B2 s.p. (5 * 5) from hundredths / 4
+    stosw                                      ;Derive A/C s.p. (8 * 7) from seconds
+    mov al, cl                                 ;Clone minutes
+    stosb                                      ;Derive Q/N1 s.p. (6 * 5) from minutes
+    mov al, dl                                 ;Clone hundredths
+    and ax, 3                                  ;Modulo 4 + clear upper byte
+    stosw                                      ;Derive N2 s.p. (4) from hundredths % 4
+
+init:
     mov si, offset init_db                     ;Set row metadata address
     mov di, offset board_db                    ;Set board address
+    mov cx, BOARD_HEIGHT                       ;Set row count
 
 init_loop:
     push cx                                    ;Save row counter
@@ -63,15 +79,49 @@ init_loop:
 
 init_row:
     push si                                    ;Save row metadata address
-    mov cl, FILE_COUNT                         ;Set square counter
-    mov si, offset capa_db                     ;Set row metadata address
-    sub di, cx                                 ;Restore square address
+    push di                                    ;Save square address
+    mov cl, FILE_COUNT                         ;Set piece counter
+    mov dl, al                                 ;Clone color
+    mov si, offset buffer_db                   ;Set random source address
+    sub di, cx                                 ;Return to first square in row
+    dec di                                     ;Back up one square
+    mov bp, offset rand_db                     ;Set piece type metadata address
 
-init_row_loop:
-    lodsb                                      ;Read piece type
-    or [di], al                                ;Set piece type
+rand_loop:
+    lodsb                                      ;Read numerator
+
+rand_piece:
+    mov bl, [bp]                               ;Read piece type
+    inc bp                                     ;Increment metadata source address
+    push cx                                    ;Save piece counter
+    push di                                    ;Save square address
+    cmp bl, 5                                  ;Bishop?
+    jne rand_cont                              ;No, proceed to increment square counter
+
+    shl ah, 1                                  ;Multiply by 2
+    add ah, cl                                 ;Add piece counter
+    sub ah, FILE_COUNT - 1                     ;Adjust square counter
+    mov cl, bl                                 ;Divide by 5
+
+rand_cont:
+    div cl                                     ;Divide s.p.
+    inc ah                                     ;Increment square counter
+
+scan_loop:
     inc di                                     ;Increment square address
-    loop init_row_loop                         ;Move to next square
+    cmp [di], dl                               ;Vacant square?
+    jne scan_loop                              ;No, move to next square
+    dec ah                                     ;Decrement square counter
+    jne scan_loop                              ;Move to next square
+    or [di], bl                                ;Set piece type
+    pop di                                     ;Restore square address
+    pop cx                                     ;Restore piece counter
+    dec cx                                     ;Decrement piece counter
+    jnp rand_piece                             ;Odd, proceed to read piece type
+    jnz rand_loop                              ;Non-zero, proceed to read numerator
+
+rand_done:
+    pop di                                     ;Restore square address
     pop si                                     ;Restore row metadata address
 
 init_cont:
@@ -321,10 +371,10 @@ disp_db: ;Fall through 1 byte
     db ".PKRNBQ?"
     db "CPKR?A"
 
-capa_db:
-    db ROOK, KNIGHT, ARCHIE, BISHOP, QUEEN, _KING, BISHOP, CHANCE, KNIGHT, ROOK
+rand_db:
+    db BISHOP, BISHOP, ARCHIE, CHANCE, QUEEN,  KNIGHT, KNIGHT, ROOK, _KING, ROOK
 
-init_db:
+init_db: ;Fall through 1 byte
     db BORDER, BORDER, BLACK OR PROMO, BLACK OR _PAWN
     db NULL, NULL, NULL, NULL, WHITE OR _PAWN, WHITE OR PROMO
 
