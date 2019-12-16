@@ -46,7 +46,30 @@ MARGIN_HEIGHT equ  2
 DEPTH equ 3
 
 start:
-    int 10h                                    ;BIOS display mode 0
+    mov cl, FILE_COUNT                         ;Set square counter
+    mov si, 82h                                ;Set source address
+    mov di, offset capa_db                     ;Set destination address
+
+cli_loop:
+    lodsb                                      ;Read piece
+    and al, 5Fh                                ;Ignore case
+    jz cli_done                                ;No piece, proceed to set display mode
+    mov bx, offset disp_db                     ;Set base chars' address
+
+cli_scan_loop:
+    inc bx                                     ;Increment char address
+    cmp [bx], al                               ;Chars match?
+    jne cli_scan_loop                          ;No, proceed to next char
+
+    mov al, bl                                 ;Clone char address
+    sub al, offset disp_db - 200h              ;Subtract base address
+    stosb                                      ;Write type
+    loop cli_loop                              ;Move to next piece
+
+cli_done:
+    xor ax, ax                                 ;Display mode 0
+    int 10h                                    ;BIOS display function
+    mov cl, BOARD_HEIGHT                       ;Set row counter
     mov si, offset init_db                     ;Set row metadata address
     mov di, offset board_db                    ;Set board address
 
