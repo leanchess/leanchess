@@ -59,7 +59,7 @@ init_loop:
     stosb                                      ;Write first square
     push ax                                    ;Save square contents
     mov cl, FILE_COUNT - 2                     ;Set square counter
-    test al, PROMO OR 02h                      ;First/Second rank?
+    test al, BLACK OR WHITE OR PROMO OR 02h    ;First/Second rank?
     jp init_row                                ;No, proceed to write row
     test al, 01h                               ;Second rank?
     jz init_cont                               ;Yes, proceed to clone row
@@ -322,10 +322,10 @@ disp_db: ;Fall through 1 byte
 
 init_db:
     db BORDER, BORDER, BLACK OR PROMO OR ROOK
-    db BLACK OR PROMO, BLACK OR PROMO OR KNIGHT, BLACK OR PROMO OR BISHOP, BLACK OR PROMO OR QUEEN, BLACK OR PROMO OR _KING
+    db PROMO, BLACK OR PROMO OR KNIGHT, BLACK OR PROMO OR BISHOP, BLACK OR PROMO OR QUEEN, BLACK OR PROMO OR _KING
     db BLACK OR PROMO OR CHANCE, BLACK OR PROMO OR ARCHIE, BLACK OR PROMO OR BISHOP, BLACK OR PROMO OR KNIGHT
     db BLACK OR PROMO OR _PAWN, NULL, NULL, NULL, NULL, WHITE OR PROMO OR _PAWN
-    db WHITE OR PROMO, WHITE OR PROMO OR KNIGHT, WHITE OR PROMO OR BISHOP, WHITE OR PROMO OR QUEEN, WHITE OR PROMO OR _KING
+    db PROMO, WHITE OR PROMO OR KNIGHT, WHITE OR PROMO OR BISHOP, WHITE OR PROMO OR QUEEN, WHITE OR PROMO OR _KING
     db WHITE OR PROMO OR CHANCE, WHITE OR PROMO OR ARCHIE, WHITE OR PROMO OR BISHOP, WHITE OR PROMO OR KNIGHT
     db WHITE OR PROMO OR ROOK
 
