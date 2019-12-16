@@ -37,9 +37,9 @@ BORDER equ 40h
 PROMO  equ 80h
 
 FILE_COUNT    equ 10
-RANK_COUNT    equ  8
+RANK_COUNT    equ 10
 BOARD_WIDTH   equ 12
-BOARD_HEIGHT  equ 13
+BOARD_HEIGHT  equ 15
 MARGIN_WIDTH  equ  2
 MARGIN_HEIGHT equ  2
 
@@ -55,26 +55,25 @@ init_loop:
     mov al, BORDER                             ;Border
     stosb                                      ;Write one byte
     stosb                                      ;Write one byte
-    mov cl, FILE_COUNT                         ;Set square counter
     lodsb                                      ;Read one byte
-    rep stosb                                  ;Write row
-    test al, PROMO                             ;First rank?
-    jz init_cont                               ;No, proceed to write row
+    stosb                                      ;Write first square
+    push ax                                    ;Save square contents
+    mov cl, FILE_COUNT - 2                     ;Set square counter
+    test al, PROMO                             ;First/Second rank?
+    jz init_row                                ;No, proceed to write row
+    test al, 01h                               ;Second rank?
+    jz init_cont                               ;Yes, proceed to clone row
+
+init_rook:
+    and al, NOT PIECE                          ;Clear piece type
 
 init_row:
-    push si                                    ;Save row metadata address
-    mov cl, FILE_COUNT                         ;Set square counter
-    mov si, offset capa_db                     ;Set row metadata address
-    sub di, cx                                 ;Restore square address
-
-init_row_loop:
-    lodsb                                      ;Read piece type
-    or [di], al                                ;Set piece type
-    inc di                                     ;Increment square address
-    loop init_row_loop                         ;Move to next square
-    pop si                                     ;Restore row metadata address
+    rep stosb                                  ;Write row
 
 init_cont:
+    rep movsb                                  ;Clone row
+    pop ax                                     ;Restore square contents
+    stosb                                      ;Write last square
     pop cx                                     ;Restore row counter
     loop init_loop                             ;Move to next row
 
@@ -319,14 +318,16 @@ eval_db: ;Fall through 1 byte
 
 disp_db: ;Fall through 1 byte
     db ".PKRNBQ?"
-    db "CPKR?A"
-
-capa_db:
-    db ROOK, KNIGHT, ARCHIE, BISHOP, QUEEN, _KING, BISHOP, CHANCE, KNIGHT, ROOK
+    db "MPKR?C"
 
 init_db:
-    db BORDER, BORDER, BLACK OR PROMO, BLACK OR _PAWN
-    db NULL, NULL, NULL, NULL, WHITE OR _PAWN, WHITE OR PROMO
+    db BORDER, BORDER, BLACK OR PROMO OR ROOK
+    db BLACK OR PROMO, BLACK OR PROMO OR KNIGHT, BLACK OR PROMO OR BISHOP, BLACK OR PROMO OR QUEEN, BLACK OR PROMO OR _KING
+    db BLACK OR PROMO OR CHANCE, BLACK OR PROMO OR ARCHIE, BLACK OR PROMO OR BISHOP, BLACK OR PROMO OR KNIGHT
+    db BLACK OR _PAWN, NULL, NULL, NULL, NULL, WHITE OR _PAWN
+    db WHITE OR PROMO, WHITE OR PROMO OR KNIGHT, WHITE OR PROMO OR BISHOP, WHITE OR PROMO OR QUEEN, WHITE OR PROMO OR _KING
+    db WHITE OR PROMO OR CHANCE, WHITE OR PROMO OR ARCHIE, WHITE OR PROMO OR BISHOP, WHITE OR PROMO OR KNIGHT
+    db WHITE OR PROMO OR ROOK
 
 board_db: ;Fall through 3 bytes
     db BOARD_HEIGHT * BOARD_WIDTH dup(?)
