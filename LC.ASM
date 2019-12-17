@@ -52,14 +52,14 @@ init_rand:
     mov ah, 2Ch                                ;Get current time
     int 21h                                    ;DOS I/O function
     mov di, offset buffer_db                   ;Set random source address
-    mov ax, dx                                 ;Clone hundredths and seconds
-    shr al, 2                                  ;Derive B1/B2 s.p. (5 * 5) from hundredths / 4
-    stosw                                      ;Derive A/C s.p. (8 * 7) from seconds
+    mov al, dh                                 ;Clone seconds
+    stosb                                      ;Derive A/C s.p. (8 * 7) from seconds
     mov al, cl                                 ;Clone minutes
     stosb                                      ;Derive Q/N1 s.p. (6 * 5) from minutes
     mov al, dl                                 ;Clone hundredths
     and ax, 3                                  ;Modulo 4 + clear upper byte
     stosw                                      ;Derive N2 s.p. (4) from hundredths % 4
+    shr dl, 2                                  ;Derive B1/B2 s.p. (5 * 5) from hundredths / 4
 
 init:
     mov si, offset init_db                     ;Set row metadata address
@@ -78,13 +78,27 @@ init_loop:
     jz init_cont                               ;No, proceed to write row
 
 init_row:
-    push si                                    ;Save row metadata address
-    push di                                    ;Save square address
-    mov cl, FILE_COUNT                         ;Set piece counter
-    mov dl, al                                 ;Clone color
+    pusha                                      ;Save all GP registers
+    xchg al, dl                                ;Swap color with hundredths
     mov si, offset buffer_db                   ;Set random source address
-    sub di, cx                                 ;Return to first square in row
-    dec di                                     ;Back up one square
+    sub di, FILE_COUNT + 1                     ;Return to first square in row
+
+rand_bish:
+    xor bx, bx                                 ;Clear upper byte
+    mov cl, 2                                  ;Repeat twice
+    mov dh, 5                                  ;Set denominator and piece type
+
+bish_loop:
+    div dh                                     ;Divide by 5
+    mov bl, ah                                 ;Clone e.p.
+    shl bl, 1                                  ;Multiply by 2
+    add bl, cl                                 ;Add piece counter
+    or [di + bx], dh                           ;Set piece type
+    xor ah, ah                                 ;Clear upper byte
+    loop bish_loop                             ;Move to next bishop
+
+rand_cont:
+    mov cl, FILE_COUNT - 2                     ;Set piece counter
     mov bp, offset rand_db                     ;Set piece type metadata address
 
 rand_loop:
@@ -93,17 +107,7 @@ rand_loop:
 rand_piece:
     mov bl, [bp]                               ;Read piece type
     inc bp                                     ;Increment metadata source address
-    push cx                                    ;Save piece counter
     push di                                    ;Save square address
-    cmp bl, 5                                  ;Bishop?
-    jne rand_cont                              ;No, proceed to increment square counter
-
-    shl ah, 1                                  ;Multiply by 2
-    add ah, cl                                 ;Add piece counter
-    sub ah, FILE_COUNT - 1                     ;Adjust square counter
-    mov cl, bl                                 ;Divide by 5
-
-rand_cont:
     div cl                                     ;Divide s.p.
     inc ah                                     ;Increment square counter
 
@@ -115,14 +119,12 @@ scan_loop:
     jne scan_loop                              ;Move to next square
     or [di], bl                                ;Set piece type
     pop di                                     ;Restore square address
-    pop cx                                     ;Restore piece counter
     dec cx                                     ;Decrement piece counter
     jnp rand_piece                             ;Odd, proceed to read piece type
     jnz rand_loop                              ;Non-zero, proceed to read numerator
 
 rand_done:
-    pop di                                     ;Restore square address
-    pop si                                     ;Restore row metadata address
+    popa                                       ;Restore all GP registers
 
 init_cont:
     pop cx                                     ;Restore row counter
@@ -372,7 +374,7 @@ disp_db: ;Fall through 1 byte
     db "CPKR?A"
 
 rand_db:
-    db BISHOP, BISHOP, ARCHIE, CHANCE, QUEEN,  KNIGHT, KNIGHT, ROOK, _KING, ROOK
+    db ARCHIE, CHANCE, QUEEN,  KNIGHT, KNIGHT, ROOK, _KING, ROOK
 
 init_db: ;Fall through 1 byte
     db BORDER, BORDER, BLACK OR PROMO, BLACK OR _PAWN
