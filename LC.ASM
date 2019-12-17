@@ -43,7 +43,6 @@ init_loop:
 
 rand:
     push dx                                    ;Save s.p.
-    push di                                    ;Save square address
     xchg al, dl                                ;Swap color with hundredths
     xor ah, ah                                 ;Clear upper byte
     mov cl, 2                                  ;Set bishop counter
@@ -77,11 +76,10 @@ knr:
     mov bx, offset rand_db                     ;Set base piece types' address
     xlat                                       ;Get piece types
     mov bl, 3                                  ;Three piece type options
-    dec cx                                     ;Five piece types per record
 
 knr_loop:
     inc di                                     ;Increment square address
-    cmp [di], dl                               ;Vacant square?
+    test byte ptr [di], 07h                    ;Vacant square?
     jnz knr_loop                               ;No, move to next square
     xor ah, ah                                 ;Clear upper byte
     div bl                                     ;Get piece type
@@ -90,7 +88,6 @@ knr_loop:
     loop knr_loop                              ;Move to next square
 
 rand_done:
-    pop di                                     ;Restore square address
     pop dx                                     ;Restore s.p.
 
 init_cont:
