@@ -55,10 +55,7 @@ init_rand:
     mov al, dh                                 ;Clone seconds
     stosb                                      ;Derive A/C s.p. (8 * 7) from seconds
     mov al, cl                                 ;Clone minutes
-    stosb                                      ;Derive Q/N1 s.p. (6 * 5) from minutes
-    mov al, dl                                 ;Clone hundredths
-    and ax, 3                                  ;Modulo 4 + clear upper byte
-    stosw                                      ;Derive N2 s.p. (4) from hundredths % 4
+    stosb                                      ;Derive Q/KNR s.p. (6 * 10) from minutes
     shr dl, 2                                  ;Derive B1/B2 s.p. (5 * 5) from hundredths / 4
 
 init:
@@ -79,7 +76,8 @@ init_loop:
 
 init_row:
     pusha                                      ;Save all GP registers
-    xchg al, dl                                ;Swap color with hundredths
+    xchg ax, dx                                ;Swap color with hundredths
+    xor ah, ah                                 ;Clear upper byte
     mov si, offset buffer_db                   ;Set random source address
     sub di, FILE_COUNT + 1                     ;Return to first square in row
 
@@ -98,17 +96,21 @@ bish_loop:
     loop bish_loop                             ;Move to next bishop
 
 rand_cont:
-    mov cl, FILE_COUNT - 2                     ;Set piece counter
     mov bp, offset rand_db                     ;Set piece type metadata address
 
 rand_loop:
     lodsb                                      ;Read numerator
+    mov cl, 2                                  ;Set piece counter
 
 rand_piece:
     mov bl, [bp]                               ;Read piece type
     inc bp                                     ;Increment metadata source address
+    mov dh, bl                                 ;Clone piece type
+    shr dh, 4                                  ;Isolate denominator
+    and bl, PIECE                              ;Isolate piece type
+    jz knr                                     ;None, proceed to generate KNR
     push di                                    ;Save square address
-    div cl                                     ;Divide s.p.
+    div dh                                     ;Divide s.p.
     inc ah                                     ;Increment square counter
 
 scan_loop:
@@ -119,9 +121,23 @@ scan_loop:
     jne scan_loop                              ;Move to next square
     or [di], bl                                ;Set piece type
     pop di                                     ;Restore square address
-    dec cx                                     ;Decrement piece counter
-    jnp rand_piece                             ;Odd, proceed to read piece type
-    jnz rand_loop                              ;Non-zero, proceed to read numerator
+    loop rand_piece                            ;Move to next piece type
+    jmp rand_loop                              ;Proceed to read numerator
+
+knr:
+    mov bx, bp                                 ;Set base piece types' address
+    xlat                                       ;Get piece types
+    mov cl, 5                                  ;Set piece counter
+
+knr_loop:
+    inc di                                     ;Increment square address
+    cmp [di], dl                               ;Vacant square?
+    jnz knr_loop                               ;No, move to next square
+    xor ah, ah                                 ;Clear upper byte
+    div dh                                     ;Get piece type
+    add ah, 2                                  ;Adjust piece type (0->2, 1->3, 2->4)
+    or [di], ah                                ;Set piece type
+    loop knr_loop                              ;Move to next square
 
 rand_done:
     popa                                       ;Restore all GP registers
@@ -374,9 +390,27 @@ disp_db: ;Fall through 1 byte
     db "CPKR?A"
 
 rand_db:
-    db ARCHIE, CHANCE, QUEEN,  KNIGHT, KNIGHT, ROOK, _KING, ROOK
+    db 8 * 16 + ARCHIE
+    db 7 * 16 + CHANCE
+    db 6 * 16 + QUEEN
+    db 3 * 16
 
-init_db: ;Fall through 1 byte
+K  equ 0
+R  equ 1
+N  equ 2
+
+    db N + N * 3 + R * 9 + K * 27 + R * 81
+    db N + R * 3 + N * 9 + K * 27 + R * 81
+    db N + R * 3 + K * 9 + N * 27 + R * 81
+    db N + R * 3 + K * 9 + R * 27 + N * 81
+    db R + N * 3 + N * 9 + K * 27 + R * 81
+    db R + N * 3 + K * 9 + N * 27 + R * 81
+    db R + N * 3 + K * 9 + R * 27 + N * 81
+    db R + K * 3 + N * 9 + N * 27 + R * 81
+    db R + K * 3 + N * 9 + R * 27 + N * 81
+    db R + K * 3 + R * 9 + N * 27 + N * 81
+
+init_db:
     db BORDER, BORDER, BLACK OR PROMO, BLACK OR _PAWN
     db NULL, NULL, NULL, NULL, WHITE OR _PAWN, WHITE OR PROMO
 
