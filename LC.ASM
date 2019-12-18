@@ -44,13 +44,12 @@ init_loop:
 rand:
     push dx                                    ;Save s.p.
     xchg al, dl                                ;Swap color with hundredths
-    xor ah, ah                                 ;Clear upper byte
     mov cl, 2                                  ;Set bishop counter
     sub di, 9                                  ;Return to first square in row - 1
 
 bish_loop:
     mov bx, ax                                 ;Clone s.p.
-    and bl, 3                                  ;Isolate bishop's position
+    and bx, 3                                  ;Isolate bishop's position
     shl bl, 1                                  ;Multiply by 2
     add bl, cl                                 ;Add bishop counter
     or byte ptr [di + bx], 03h                 ;Set piece type
