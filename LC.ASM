@@ -43,22 +43,22 @@ init_loop:
 
 rand:
     push dx                                    ;Save s.p.
-    xchg al, dl                                ;Swap color with hundredths
-    xor ah, ah                                 ;Clear upper byte
+    xchg ax, dx                                ;Swap color with hundredths and seconds
     mov cl, 2                                  ;Set bishop counter
+    mov dx, 0703h                              ;Set piece type and piece filter
     sub di, 9                                  ;Return to first square in row - 1
 
 bish_loop:
     mov bx, ax                                 ;Clone s.p.
-    and bl, 3                                  ;Isolate bishop's position
+    and bx, 3                                  ;Isolate bishop's position
     shl bl, 1                                  ;Multiply by 2
     add bl, cl                                 ;Add bishop counter
-    or byte ptr [di + bx], 03h                 ;Set piece type
+    or [di + bx], dl                           ;Set piece type
     shr ax, 2                                  ;Divide s.p. by 4
     loop bish_loop                             ;Move to next bishop
 
 queen:
-    mov al, dh                                 ;Clone seconds
+    shr ax, 4                                  ;Move to seconds
     mov cl, 6                                  ;Set piece counter
     xor bx, bx                                 ;Clear queen's position
     div cl                                     ;Divide s.p. by piece counter
@@ -66,7 +66,7 @@ queen:
 
 queen_loop:
     inc bx                                     ;Increment square address
-    cmp [di + bx], dl                          ;Vacant square?
+    test [di + bx], dh                         ;Vacant square?
     jne queen_loop                             ;No, move to next square
     dec ah                                     ;Decrement square counter
     jne queen_loop                             ;Move to next square
@@ -75,16 +75,15 @@ queen_loop:
 knr:
     mov bx, offset rand_db                     ;Set base piece types' address
     xlat                                       ;Get piece types
-    mov bl, 3                                  ;Three piece type options
 
 knr_loop:
     inc di                                     ;Increment square address
-    test byte ptr [di], 07h                    ;Vacant square?
+    test [di], dh                              ;Vacant square?
     jnz knr_loop                               ;No, move to next square
     xor ah, ah                                 ;Clear upper byte
-    div bl                                     ;Get piece type
+    div dl                                     ;Get piece type
     xor ah, 05h                                ;Adjust piece type (0->5, 1->4, 2->7)
-    or [di], ah                                ;Write square
+    or [di], ah                                ;Set piece type
     loop knr_loop                              ;Move to next square
 
 rand_done:
