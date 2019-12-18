@@ -51,11 +51,9 @@ start:
 init_rand:
     mov ah, 2Ch                                ;Get current time
     int 21h                                    ;DOS I/O function
-    mov di, offset buffer_db                   ;Set random source address
-    mov al, dh                                 ;Clone seconds
-    stosb                                      ;Derive A/C s.p. (8 * 7) from seconds
-    mov al, cl                                 ;Clone minutes
-    stosb                                      ;Derive Q/KNR s.p. (6 * 10) from minutes
+    mov di, offset rand_db                     ;Set metadata source address
+    mov [di], dh                               ;Derive A/C s.p. (8 * 7) from seconds
+    mov [di + 3], cl                           ;Derive Q/KNR s.p. (6 * 10) from minutes
     shr dl, 2                                  ;Derive B1/B2 s.p. (5 * 5) from hundredths / 4
 
 init:
@@ -78,7 +76,7 @@ init_row:
     pusha                                      ;Save all GP registers
     xchg ax, dx                                ;Swap color with hundredths
     xor ah, ah                                 ;Clear upper byte
-    mov si, offset buffer_db                   ;Set random source address
+    mov si, offset rand_db                     ;Set metadata source address
     sub di, FILE_COUNT + 1                     ;Return to first square in row
 
 rand_bish:
@@ -95,16 +93,13 @@ bish_loop:
     xor ah, ah                                 ;Clear upper byte
     loop bish_loop                             ;Move to next bishop
 
-rand_cont:
-    mov bp, offset rand_db                     ;Set piece type metadata address
-
 rand_loop:
     lodsb                                      ;Read numerator
     mov cl, 2                                  ;Set piece counter
 
 rand_piece:
-    mov bl, [bp]                               ;Read piece type
-    inc bp                                     ;Increment metadata source address
+    mov bl, [si]                               ;Read piece type
+    inc si                                     ;Increment metadata source address
     mov dh, bl                                 ;Clone piece type
     shr dh, 4                                  ;Isolate denominator
     and bl, PIECE                              ;Isolate piece type
@@ -125,7 +120,7 @@ scan_loop:
     jmp rand_loop                              ;Proceed to read numerator
 
 knr:
-    mov bx, bp                                 ;Set base piece types' address
+    mov bx, si                                 ;Set base piece types' address
     xlat                                       ;Get piece types
     mov cl, 5                                  ;Set piece counter
 
@@ -390,10 +385,8 @@ disp_db: ;Fall through 1 byte
     db "CPKR?A"
 
 rand_db:
-    db 8 * 16 + ARCHIE
-    db 7 * 16 + CHANCE
-    db 6 * 16 + QUEEN
-    db 3 * 16
+    db ?, 8 * 16 + ARCHIE, 7 * 16 + CHANCE
+    db ?, 6 * 16 + QUEEN,  3 * 16
 
 K  equ 0
 R  equ 1
