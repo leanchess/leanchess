@@ -206,8 +206,7 @@ eval:
     mov cx, [bp + 32]                          ;Read current depth
     dec cx                                     ;Decrement depth
     call move_sub                              ;Recursively call self
-    mov ah, [bp + 35]                          ;Read player's max value
-    cmp al, ah                                 ;Max value exceeds current value?
+    cmp al, [bp + 35]                          ;Max value exceeds current value?
     pop di                                     ;Restore destination square address
     pop si                                     ;Restore source square address
     jl undo                                    ;Yes, proceed to undo move
