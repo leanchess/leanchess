@@ -95,7 +95,7 @@ read_sub:
     int 21h                                    ;DOS I/O function
     add di, ax                                 ;Add result to base address
     int 21h                                    ;DOS I/O function
-    aaa                                        ;Isolate digit (expected 1-8)
+    and al, 0Fh                                ;Isolate number (expected 1-8)
     mov ah, 12                                 ;
     mul ah                                     ;Multiply by 12
     sub di, ax                                 ;Subtract result from base address
