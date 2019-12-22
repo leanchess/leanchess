@@ -33,7 +33,7 @@ start:
 
 init_loop:
     push cx                                    ;Save row counter
-    mov ax, 0808h                              ;Border
+    mov ax, 4040h                              ;Border
     stosw                                      ;Write two bytes
     mov cl, 8                                  ;Set square counter
     lodsb                                      ;Read one byte
@@ -58,12 +58,12 @@ main_loop:
 
 disp_loop:
     lodsb                                      ;Read square contents
-    cmp al, 08h                                ;Border?
-    je disp_border                             ;Yes, proceed to next row
 
 disp_piece:
     mov ah, al                                 ;Clone square contents
-    and ax, 2007h                              ;Isolate piece type and case
+    and ax, 2047h                              ;Isolate piece type/border and case
+    cmp al, 40h                                ;Border?
+    je disp_border                             ;Yes, proceed to next row
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
     or al, ah                                  ;Apply case
@@ -73,11 +73,11 @@ disp_piece:
 
 disp_border:
     inc si                                     ;Move to next rank
-    add di, 64                                 ;Move to next row
+    add di, ax                                 ;Move to next row
     loop disp_loop                             ;Move to next rank
 
 play:
-    mov dx, 1828h                              ;Set player's and opponent's colors
+    mov dx, 5060h                              ;Set player's and opponent's colors
     mov cl, 4                                  ;Set search depth
     push offset main_loop                      ;Repeat forever
     mov ax, offset move_sub                    ;Perform two moves:
@@ -258,7 +258,7 @@ disp_db: ;Fall through 1 byte
     db 46, "PpBNRQK"
     
 init_db:
-    db 08, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
+    db 40h, 40h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
     db 22h, 00h, 00h, 00h, 00h, 11h
     db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
 
