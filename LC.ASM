@@ -11,6 +11,14 @@
 ;
 ; The above copyright notice and this permission notice shall be included in all
 ; copies or substantial portions of the Software.
+;
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+; SOFTWARE.
 
 .model tiny
 .186
@@ -136,13 +144,12 @@ eval_sub:
     push bp                                    ;Save source square address
     push di                                    ;Save destination square address
 
-    mov si, bp
+    mov si, bp                                 ;Clone source square address
     mov bp, sp                                 ;Clone stack pointer
     mov cx, [bp + 36]                          ;Read current depth
     dec cx                                     ;Decrement depth
     call move_sub                              ;Perform move and find next best move
-    mov ah, [bp + 39]                          ;Read player's max value
-    cmp al, ah                                 ;Max value exceeds current value?
+    cmp al, [bp + 39]                          ;Max value exceeds current value?
     pop di                                     ;Restore destination square address
     pop si                                     ;Restore source square address
     jl undo                                    ;Yes, proceed to undo move
