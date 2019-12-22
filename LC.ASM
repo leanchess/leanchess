@@ -69,7 +69,7 @@ disp_done:
 
 play:
     mov dx, 1828h                              ;Set player's and opponent's colors
-    mov cl, 3                                  ;Set search depth
+    mov cl, 4                                  ;Set search depth
     push offset main_loop                      ;Repeat forever
     mov ax, offset move_sub                    ;Perform two moves:
     push ax                                    ;Perform computer's move
