@@ -35,7 +35,6 @@ init_loop:
     push cx                                    ;Save row counter
     mov ax, 0808h                              ;Border
     stosw                                      ;Write two bytes
-    stosw                                      ;Write two bytes
     mov cl, 8                                  ;Set square counter
     lodsb                                      ;Read one byte
     test al, 80h                               ;First rank?
@@ -49,30 +48,33 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 init_done:
-    mov bp, di                                 ;Save buffer address
+    push 0B82Ah                                ;Column 8, row 16
+    pop es                                     ;Set destination segment
 
 main_loop:
-    mov cl, 60h                                ;Ranks * width + margin width + safety
-    mov si, offset board_db + 26               ;Grab two preceding tabs
-    mov di, bp                                 ;Restore buffer address
-    push cx                                    ;Save output length
+    mov cl, 8                                  ;Set rank count
+    mov si, offset board_db + 22               ;Start from top left corner
+    xor di, di                                 ;Set destination address
 
 disp_loop:
     lodsb                                      ;Read square contents
+    cmp al, 08h                                ;Border?
+    je disp_border                             ;Yes, proceed to next row
+
+disp_piece:
     mov ah, al                                 ;Clone square contents
-    and ax, 200Fh                              ;Isolate piece type/border and case
+    and ax, 2007h                              ;Isolate piece type and case
     mov bx, offset disp_db                     ;Set base chars' address
     xlat                                       ;Translate piece type to char
     or al, ah                                  ;Apply case
-    stosb                                      ;Write square
-    loop disp_loop                             ;Move to next square
-    
-disp_done:
-    pop cx                                     ;Restore output length
-    mov ah, 13h                                ;Write string
-    mov bx, cx                                 ;Black on brown
-    xor dx, dx                                 ;Set position to 0,0
-    int 10h                                    ;BIOS output function
+    mov ah, 07h                                ;Set attributes
+    stosw                                      ;Write square
+    jmp disp_loop                              ;Move to next square
+
+disp_border:
+    inc si                                     ;Move to next rank
+    add di, 64                                 ;Move to next row
+    loop disp_loop                             ;Move to next rank
 
 play:
     mov dx, 1828h                              ;Set player's and opponent's colors
@@ -89,10 +91,10 @@ main_end:
 ;  DI - Square address
 read_square_sub:
     mov si, di                                 ;Clone address
-    mov di, offset board_db + 123              ;Bottom right corner + margin
+    mov di, offset board_db + 101              ;Bottom right corner + margin
     mov bl, 1                                  ;Set file factor
     call read_coord_sub                        ;Read character and add to address
-    mov bl, -12                                ;Set rank factor
+    mov bl, -10                                ;Set rank factor
     
 ;Read coordinate from input and update square address
 ;Input:
@@ -136,7 +138,7 @@ move_sub:
 
 next:
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 28               ;Start from top left corner
+    mov bp, offset board_db + 22               ;Start from top left corner
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
@@ -242,18 +244,18 @@ moves_db:
     moves_rook   db vec_rook   - moves_rook   - 1
     moves_queen  db vec_king   - moves_queen  - 1
 
-    vec_bpawn    db  12                     ;Fall through 1 byte
-    vec_bishop   db  11,  13,   0
-    vec_knight   db  10,  14,  23,  25,   0
-    vec_wpawn    db -12, -13, -11,   0
-    vec_king     db  11,  13
-    vec_rook     db  12,   1
+    vec_knight   db  12,   8,  19,  21,   0 ;Fall through 1 byte
+    vec_bpawn    db  10
+    vec_bishop   db   9,  11,   0
+    vec_wpawn    db -10, -11,  -9,   0
+    vec_king     db   9,  11
+    vec_rook     db  10,   1
 
 eval_db: ;Fall through 1 byte
     db 0, 1, 1, 3, 3, 5, 9
 
 disp_db: ;Fall through 1 byte
-    db 46, "PpBNRQK", 09h
+    db 46, "PpBNRQK"
     
 init_db:
     db 08, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
@@ -261,9 +263,7 @@ init_db:
     db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
 
 board_db: ;Fall through 3 bytes
-    db 156 dup(?)
-
-buffer_db:
+    db 130 dup(?)
 
 code ends
 end start
