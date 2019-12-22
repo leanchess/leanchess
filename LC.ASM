@@ -48,12 +48,14 @@ init_cont:
     loop init_loop                             ;Move to next row
 
 init_done:
-    mov bp, di                                 ;Save buffer address
+    push 0B82Ah                                ;Column 8, row 16
+    pop es                                     ;Set destination segment
 
 main_loop:
+    mov ah, 07h                                ;Set attributes
     mov cl, 8                                  ;Set rank count
     mov si, offset board_db + 22               ;Start from top left corner
-    mov di, bp                                 ;Restore buffer address
+    xor di, di                                 ;Set destination address
 
 disp_loop:
     lodsb                                      ;Read square contents
@@ -67,21 +69,13 @@ disp_piece:
     add al, 4Bh                                ;King, (none), (reserved), kNight, bishOp, Pawn, Queen, Rook
     
 disp_cont:
-    stosb                                      ;Write square
+    stosw                                      ;Write square
     jmp disp_loop                              ;Move to next square
 
 disp_border:
     inc si                                     ;Move to next rank
-    mov ax, 0A0Dh                              ;CR/LF
-    stosw                                      ;Write two bytes
-    loop disp_loop                             ;Move to next row
-    
-disp_done:
-    mov cl, 80                                 ;Output length
-    mov ah, 13h                                ;Write string
-    mov bl, 07h                                ;Light gray on black
-    xor dx, dx                                 ;Set position to 0,0
-    int 10h                                    ;BIOS output function
+    add di, 64                                 ;Move to next row
+    loop disp_loop                             ;Move to next rank
 
 play:
     mov dx, 1828h                              ;Set player's and opponent's colors
@@ -267,8 +261,6 @@ init_db:
 
 board_db: ;Fall through 3 bytes
     db 130 dup(?)
-
-buffer_db:
 
 code ends
 end start
