@@ -11,6 +11,14 @@
 ;
 ; The above copyright notice and this permission notice shall be included in all
 ; copies or substantial portions of the Software.
+;
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+; SOFTWARE.
 
 .model tiny
 .186
@@ -43,7 +51,7 @@ BOARD_HEIGHT  equ 13
 MARGIN_WIDTH  equ  2
 MARGIN_HEIGHT equ  2
 
-DEPTH equ 3
+DEPTH equ 4
 
 start:
     int 10h                                    ;BIOS display mode 0
@@ -193,7 +201,7 @@ read_sub:
     int 21h                                    ;DOS I/O function
     add di, ax                                 ;Add result to base address
     int 21h                                    ;DOS I/O function
-    and al, 0Fh                                ;Isolate number (expected 1-10)
+    aaa                                        ;Isolate digit (expected 1-8)
     mov ah, BOARD_WIDTH                        ;Set board width
     mul ah                                     ;Multiply by width
     sub di, ax                                 ;Subtract result from base address
