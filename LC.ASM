@@ -35,7 +35,6 @@ init_loop:
     push cx                                    ;Save row counter
     mov ax, 0808h                              ;Border
     stosw                                      ;Write two bytes
-    stosw                                      ;Write two bytes
     mov cl, 8                                  ;Set square counter
     lodsb                                      ;Read one byte
     test al, 80h                               ;First rank?
@@ -52,31 +51,35 @@ init_done:
     mov bp, di                                 ;Save buffer address
 
 main_loop:
-    mov cl, 60h                                ;Ranks * width + margin width + safety
-    mov si, offset board_db + 26               ;Grab two preceding tabs
+    mov cl, 8                                  ;Set rank count
+    mov si, offset board_db + 22               ;Start from top left corner
     mov di, bp                                 ;Restore buffer address
-    push cx                                    ;Save output length
 
 disp_loop:
     lodsb                                      ;Read square contents
-    test al, 38h                               ;Piece or border?
-    jz disp_cont                               ;No, proceed to write square
+    cmp al, 08h                                ;Empty or border?
+    jz disp_border                             ;Border, proceed to next row
+    jb disp_cont                               ;Empty, proceed to write square
 
 disp_piece:
     inc ax                                     ;Zero-align king
-    cmp al, 09h                                ;Border?
-    jz disp_cont                               ;Yes, proceed to write square
     and al, 27h                                ;Isolate piece type and black/lowercase
     add al, 4Bh                                ;King, (none), (reserved), kNight, bishOp, Pawn, Queen, Rook
     
 disp_cont:
     stosb                                      ;Write square
-    loop disp_loop                             ;Move to next square
+    jmp disp_loop                              ;Move to next square
+
+disp_border:
+    inc si                                     ;Move to next rank
+    mov ax, 0A0Dh                              ;CR/LF
+    stosw                                      ;Write two bytes
+    loop disp_loop                             ;Move to next row
     
 disp_done:
-    pop cx                                     ;Restore output length
+    mov cl, 80                                 ;Output length
     mov ah, 13h                                ;Write string
-    mov bx, cx                                 ;Black on brown
+    mov bl, 07h                                ;Light gray on black
     xor dx, dx                                 ;Set position to 0,0
     int 10h                                    ;BIOS output function
 
@@ -95,10 +98,10 @@ main_end:
 ;  DI - Square address
 read_square_sub:
     mov si, di                                 ;Clone address
-    mov di, offset board_db + 123              ;Bottom right corner + margin
+    mov di, offset board_db + 101              ;Bottom right corner + margin
     mov bl, 1                                  ;Set file factor
     call read_coord_sub                        ;Read character and add to address
-    mov bl, -12                                ;Set rank factor
+    mov bl, -10                                ;Set rank factor
     
 ;Read coordinate from input and update square address
 ;Input:
@@ -144,7 +147,7 @@ move_sub:
 
 next:
     pusha                                      ;Save all GP registers
-    mov bp, offset board_db + 28               ;Start from top left corner
+    mov bp, offset board_db + 22               ;Start from top left corner
     mov cl, 78                                 ;Ranks * width - margin width
 
 src_loop:
@@ -247,13 +250,12 @@ moves_db:
     moves_pawn   db vec_pawn   - moves_pawn   - 1
     moves_queen  db vec_king   - moves_queen  - 1
     moves_rook   db vec_rook   - moves_rook   - 1
-    moves_king   db vec_king   - moves_king   - 1
 
-    vec_knight   db  10,  14,  23,  25,   0
-    vec_pawn     db  12
-    vec_bishop   db  11,  13,   0
-    vec_king     db  11,  13
-    vec_rook     db  12,   1
+    vec_knight   db   8,  12,  19,  21,   0 ;Fall through 1 byte
+    vec_pawn     db  10
+    vec_bishop   db   9,  11,   0
+    vec_king     db   9,  11
+    vec_rook     db  10,   1
 
 eval_db: ;Fall through 1 byte
     db 0, 0, 3, 3, 1, 9, 5, 46
@@ -264,7 +266,7 @@ init_db:
     db 96h, 92h, 93h, 95h, 97h, 93h, 92h, 96h
 
 board_db: ;Fall through 3 bytes
-    db 156 dup(?)
+    db 130 dup(?)
 
 buffer_db:
 
