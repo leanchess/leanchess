@@ -11,6 +11,14 @@
 ;
 ; The above copyright notice and this permission notice shall be included in all
 ; copies or substantial portions of the Software.
+;
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+; SOFTWARE.
 
 .model tiny
 .186
@@ -68,7 +76,7 @@ disp_done:
 
 play:
     mov dx, 1828h                              ;Set player's and opponent's colors
-    mov cl, 3                                  ;Set search depth
+    mov cl, 4                                  ;Set search depth
     push offset main_loop                      ;Repeat forever
     mov ax, offset move_sub                    ;Perform two moves:
     push ax                                    ;Perform computer's move
@@ -95,7 +103,7 @@ read_square_sub:
 read_coord_sub:
     xor ah, ah                                 ;Read character
     int 16h                                    ;BIOS input function
-    and al, 0Fh                                ;Isolate number (expected 1-8)
+    aaa                                        ;Isolate digit (expected 1-8)
     imul bl                                    ;Multiply signed
     add di, ax                                 ;Add result to base address
     ret
