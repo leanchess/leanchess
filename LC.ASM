@@ -132,7 +132,7 @@ move_sub:
 next:
     pusha                                      ;Save all GP registers
     mov bp, offset board_db + 28               ;Start from top left corner
-    mov cl, 78                                 ;Ranks * width - margin width
+    mov cl, 92                                 ;Ranks * width - margin width
 
 src_loop:
     mov al, [bp]                               ;Read source square
