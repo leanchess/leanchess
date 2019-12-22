@@ -124,7 +124,7 @@ move_sub:
 next:
     pusha                                      ;Save all GP registers
     mov bp, offset board_db + 28               ;Start from top left corner
-    mov cl, 78                                 ;Ranks * width - margin width
+    mov cl, 92                                 ;Ranks * width - margin width
 
 src_loop:
     mov al, [bp]                               ;Read source square
@@ -242,7 +242,7 @@ disp_db: ;Fall through 1 byte
     db 46, "PpBNRQK", 09h
     
 init_db:
-    db 08, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
+    db 08h, 08h, 0A5h, 0A4h, 0A3h, 0A6h, 0A7h, 0A3h, 0A4h, 0A5h
     db 22h, 00h, 00h, 00h, 00h, 11h
     db 95h, 94h, 93h, 96h, 97h, 93h, 94h, 95h
 
