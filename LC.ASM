@@ -69,7 +69,7 @@ disp_piece:
     or al, ah                                  ;Apply case
     mov ah, 07h                                ;Set attributes
     stosw                                      ;Write square
-    jmp disp_loop                              ;Move to next square
+    jmp short disp_loop                        ;Move to next square
 
 disp_border:
     inc si                                     ;Move to next rank
