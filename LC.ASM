@@ -70,7 +70,7 @@ disp_piece:
     
 disp_cont:
     stosw                                      ;Write square
-    jmp disp_loop                              ;Move to next square
+    jmp short disp_loop                        ;Move to next square
 
 disp_border:
     inc si                                     ;Move to next rank
