@@ -125,7 +125,7 @@ scan_loop:
     or [di], bl                                ;Set piece type
     pop di                                     ;Restore square address
     loop rand_piece                            ;Move to next piece type
-    jmp rand_loop                              ;Proceed to read numerator
+    jmp short rand_loop                        ;Proceed to read numerator
 
 knr:
     mov bx, si                                 ;Set base piece types' address
@@ -163,7 +163,7 @@ disp_loop:
 disp_border:
     mov al, 0Ah                                ;LF
     inc si                                     ;Skip border square
-    jmp disp_cont                              ;Proceed to write square
+    jmp short disp_cont                        ;Proceed to write square
 
 disp_piece:
     mov ah, al                                 ;Clone square contents
@@ -354,7 +354,7 @@ vec_cont:
 
 comp_cont:
     mov al, KNIGHT                             ;Revert to knight
-    jmp comp_loop                              ;Proceed to generate knight's moves
+    jmp short comp_loop                        ;Proceed to generate knight's moves
 
 src_cont:
     inc bp                                     ;Increment source square address
